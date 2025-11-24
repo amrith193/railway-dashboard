@@ -19,6 +19,190 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* =========================================
+   LOGIN PAGE STYLES (New)
+   ========================================= */
+.login-root {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  /* Indian Train Background Image */
+  background-image: url('https://www.railway-technology.com/wp-content/uploads/sites/13/2020/03/800px-Indian-Railways.jpg');
+  background-size: cover;
+  background-position: center;
+}
+
+.login-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.2), rgba(15, 23, 42, 0.7));
+  z-index: 1;
+}
+
+.govt-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: white;
+  z-index: 2;
+  border-bottom: 4px solid #ff9933; /* Saffron top border */
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+
+.govt-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.emblem {
+  height: 48px;
+  width: auto;
+}
+
+.govt-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.govt-text span {
+  font-size: 14px;
+  color: #1e293b;
+  letter-spacing: 0.5px;
+}
+
+.govt-text strong {
+  font-size: 18px;
+  text-transform: uppercase;
+  color: #1e293b;
+}
+
+.login-card {
+  position: relative;
+  z-index: 10;
+  background: white;
+  width: 400px;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  border-top: 5px solid #138808; /* India Green */
+}
+
+.login-header {
+  margin-bottom: 32px;
+}
+
+.rail-logo-circle {
+  width: 64px;
+  height: 64px;
+  background: #0f172a;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px auto;
+  color: white;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.login-header h2 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 24px;
+}
+
+.login-header p {
+  margin: 8px 0 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.input-group-login {
+  position: relative;
+}
+
+.input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+.input-group-login input {
+  width: 100%;
+  padding: 12px 12px 12px 40px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+  transition: all 0.2s;
+}
+
+.input-group-login input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.btn-login-submit {
+  background: #1e293b;
+  color: white;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 8px;
+}
+
+.btn-login-submit:hover {
+  background: #334155;
+}
+
+.login-error {
+  color: #ef4444;
+  font-size: 13px;
+  background: #fef2f2;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #fecaca;
+  text-align: left;
+}
+
+.login-footer {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.login-footer p {
+  font-size: 11px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+
+/* =========================================
+   DASHBOARD STYLES (Existing)
+   ========================================= */
+
 /* Layout */
 .app-root {
   min-height: 100vh;
@@ -293,4 +477,6 @@ body {
 /* Tiny responsive fix for bulk bar on small screens */
 @media (max-width: 600px) {
   .bulk-action-bar { left: 16px; transform: none; width: calc(100% - 32px); }
+  .login-card { width: 90%; padding: 24px; }
+  .govt-content { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
