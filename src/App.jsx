@@ -19,7 +19,8 @@ import {
   Send,
   CheckCircle,
   Repeat,
-  Quote
+  Quote,
+  Terminal
 } from "lucide-react";
 
 import "./App.css";
@@ -39,9 +40,22 @@ export default function App() {
   const [complaints, setComplaints] = useState([]);
   const [replyInput, setReplyInput] = useState({});
   const [replyType, setReplyType] = useState({});
+  const [botLogs, setBotLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 🚀 FIRESTORE REAL-TIME LISTENER
+  // 🚀 LIVE LOG LISTENER
+  useEffect(() => {
+    const logDoc = doc(db, "logs", "bot");
+    const unsub = onSnapshot(logDoc, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setBotLogs(data.messages || []);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  // 🚀 LIVE COMPLAINT LISTENER
   useEffect(() => {
     const ref = collection(db, "complaints");
     const q = query(ref, orderBy("timestamp", "desc"));
@@ -72,7 +86,6 @@ export default function App() {
         setLoading(false);
       }
     );
-
     return () => unsub();
   }, []);
 
@@ -81,7 +94,6 @@ export default function App() {
     setLoading(true);
     const q = query(collection(db, "complaints"), orderBy("timestamp", "desc"));
     const snap = await getDocs(q);
-
     const arr = snap.docs.map((d) => ({
       id: d.id,
       ...d.data(),
@@ -96,7 +108,6 @@ export default function App() {
   const handleSendReply = async (id, user) => {
     const text = (replyInput[id] || "").trim();
     const type = replyType[id] || "quote";
-
     if (!text) return alert("Enter a reply message.");
 
     try {
@@ -117,7 +128,9 @@ export default function App() {
       <header className="header-card">
         <div>
           <h1 className="title">🚆 Railway Admin Dashboard</h1>
-          <p className="subtitle">Monitor & Reply — <strong>@RailSeva_PRO</strong></p>
+          <p className="subtitle">
+            Monitor & Reply — <strong>@RailSeva_PRO</strong>
+          </p>
         </div>
 
         <button className="btn ghost" onClick={handleManualRefresh}>
@@ -174,6 +187,7 @@ export default function App() {
               <tbody>
                 {complaints.map((c) => (
                   <tr key={c.id}>
+                    {/* category */}
                     <td className="cat-col">
                       <div className="cat-inner">
                         {getIcon(c.category)}
@@ -181,6 +195,7 @@ export default function App() {
                       </div>
                     </td>
 
+                    {/* tweet */}
                     <td className="tweet-col">
                       <div className="tweet-user">@{c.user}</div>
                       <div className="tweet-text">{c.text}</div>
@@ -189,6 +204,7 @@ export default function App() {
                       </div>
                     </td>
 
+                    {/* status */}
                     <td className="status-col">
                       <span
                         className={`badge ${
@@ -203,6 +219,7 @@ export default function App() {
                       </span>
                     </td>
 
+                    {/* reply type */}
                     <td className="reply-type">
                       {c.replyType === "quote" ? (
                         <span className="badge blue">
@@ -213,6 +230,7 @@ export default function App() {
                       )}
                     </td>
 
+                    {/* Reply box */}
                     <td className="action-col">
                       {c.status === "Replied" ? (
                         <div className="sent">
@@ -262,6 +280,22 @@ export default function App() {
             </table>
           </div>
         )}
+      </section>
+
+      {/* BOT LOG CONSOLE */}
+      <section className="log-console-card">
+        <div className="console-header">
+          <Terminal size={18} />
+          <h2>Bot Console</h2>
+        </div>
+
+        <div className="console-window">
+          {botLogs.slice(-200).map((log, i) => (
+            <div key={i} className="console-line">
+              {log}
+            </div>
+          ))}
+        </div>
       </section>
     </div>
   );
