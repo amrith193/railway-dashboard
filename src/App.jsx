@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { db } from "./firebase";
 import {
   collection,
@@ -18,21 +18,24 @@ import {
   Activity,
   Send,
   CheckCircle,
-  Repeat,
+  RefreshCw,
   Quote,
-  Terminal
+  Terminal,
+  MessageSquare,
+  AlertCircle,
+  LayoutDashboard
 } from "lucide-react";
 
 import "./App.css";
 
 const getIcon = (category) => {
   switch (category) {
-    case "Safety": return <Shield className="icon safety" />;
-    case "Train Delay": return <Clock className="icon delay" />;
-    case "Food": return <Utensils className="icon food" />;
-    case "Medical emergency": return <Activity className="icon medical" />;
-    case "Cleanliness": return <span className="icon sparkle">✨</span>;
-    default: return <span className="icon train">🚂</span>;
+    case "Safety": return <Shield className="icon safety" size={18} />;
+    case "Train Delay": return <Clock className="icon delay" size={18} />;
+    case "Food": return <Utensils className="icon food" size={18} />;
+    case "Medical emergency": return <Activity className="icon medical" size={18} />;
+    case "Cleanliness": return <span className="icon-emoji">✨</span>;
+    default: return <span className="icon-emoji">🚂</span>;
   }
 };
 
@@ -42,6 +45,9 @@ export default function App() {
   const [replyType, setReplyType] = useState({});
   const [botLogs, setBotLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Auto-scroll console
+  const consoleEndRef = useRef(null);
 
   // 🚀 LIVE LOG LISTENER
   useEffect(() => {
@@ -55,14 +61,17 @@ export default function App() {
     return () => unsub();
   }, []);
 
+  // Auto scroll to bottom of logs
+  useEffect(() => {
+    consoleEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [botLogs]);
+
   // 🚀 LIVE COMPLAINT LISTENER
   useEffect(() => {
     const ref = collection(db, "complaints");
     const q = query(ref, orderBy("timestamp", "desc"));
 
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
+    const unsub = onSnapshot(q, (snap) => {
         const arr = snap.docs.map((d) => {
           const data = d.data();
           return {
@@ -74,10 +83,8 @@ export default function App() {
             status: data.status || "Pending",
             replyType: data.replyType || "quote",
             timestamp: data.timestamp || null,
-            created_at: data.created_at || null
           };
         });
-
         setComplaints(arr);
         setLoading(false);
       },
@@ -94,18 +101,13 @@ export default function App() {
     setLoading(true);
     const q = query(collection(db, "complaints"), orderBy("timestamp", "desc"));
     const snap = await getDocs(q);
-    const arr = snap.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-      replyType: d.data().replyType || "quote"
-    }));
-
+    const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     setComplaints(arr);
     setLoading(false);
   };
 
   // ✍️ SEND REPLY
-  const handleSendReply = async (id, user) => {
+  const handleSendReply = async (id) => {
     const text = (replyInput[id] || "").trim();
     const type = replyType[id] || "quote";
     if (!text) return alert("Enter a reply message.");
@@ -123,180 +125,170 @@ export default function App() {
     }
   };
 
+  const pendingCount = complaints.filter(c => c.status === "needs_reply" || c.status === "Pending").length;
+  const repliedCount = complaints.filter(c => c.status === "Replied").length;
+
   return (
     <div className="app-root">
-      <header className="header-card">
-        <div>
-          <h1 className="title">🚆 Railway Admin Dashboard</h1>
-          <p className="subtitle">
-            Monitor & Reply — <strong>@RailSeva_PRO</strong>
-          </p>
-        </div>
-
-        <button className="btn ghost" onClick={handleManualRefresh}>
-          <Repeat size={16} /> Refresh
-        </button>
-      </header>
-
-      {/* STATS */}
-      <section className="stats-grid">
-        <div className="card stat">
-          <div className="label">Total Complaints</div>
-          <div className="value">{complaints.length}</div>
-        </div>
-
-        <div className="card stat">
-          <div className="label">Pending Replies</div>
-          <div className="value warning">
-            {complaints.filter((c) => c.status === "needs_reply").length}
+      {/* NAVBAR */}
+      <nav className="navbar">
+        <div className="nav-brand">
+          <div className="brand-logo">🚆</div>
+          <div>
+            <h1>RailSeva Pro</h1>
+            <span className="badge-pro">ADMIN</span>
           </div>
         </div>
-
-        <div className="card stat">
-          <div className="label">Replied</div>
-          <div className="value success">
-            {complaints.filter((c) => c.status === "Replied").length}
-          </div>
+        <div className="nav-actions">
+           <div className="live-indicator">
+              <span className="blink">●</span> Live Connection
+           </div>
+           <button className="btn ghost" onClick={handleManualRefresh}>
+            <RefreshCw size={16} /> Sync
+          </button>
         </div>
-      </section>
+      </nav>
 
-      {/* TABLE */}
-      <section className="table-card">
-        <div className="table-header">
-          <h2>Incoming Complaints</h2>
-          <p className="tiny-note">Auto-updates in real time</p>
-        </div>
-
-        {loading ? (
-          <div className="loader">Loading...</div>
-        ) : complaints.length === 0 ? (
-          <div className="empty">No complaints found.</div>
-        ) : (
-          <div className="table-wrap">
-            <table className="complaint-table">
-              <thead>
-                <tr>
-                  <th>Category</th>
-                  <th>Complaint</th>
-                  <th>Status</th>
-                  <th>Reply Type</th>
-                  <th>Admin Reply</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {complaints.map((c) => (
-                  <tr key={c.id}>
-                    {/* category */}
-                    <td className="cat-col">
-                      <div className="cat-inner">
-                        {getIcon(c.category)}
-                        <span className="cat-text">{c.category}</span>
-                      </div>
-                    </td>
-
-                    {/* tweet */}
-                    <td className="tweet-col">
-                      <div className="tweet-user">@{c.user}</div>
-                      <div className="tweet-text">{c.text}</div>
-                      <div className="tweet-meta">
-                        Confidence: {(c.confidence * 100).toFixed(0)}%
-                      </div>
-                    </td>
-
-                    {/* status */}
-                    <td className="status-col">
-                      <span
-                        className={`badge ${
-                          c.status === "Replied"
-                            ? "green"
-                            : c.status === "needs_reply"
-                            ? "amber"
-                            : "blue"
-                        }`}
-                      >
-                        {c.status === "needs_reply" ? "Sending…" : c.status}
-                      </span>
-                    </td>
-
-                    {/* reply type */}
-                    <td className="reply-type">
-                      {c.replyType === "quote" ? (
-                        <span className="badge blue">
-                          <Quote size={14} /> Quote
-                        </span>
-                      ) : (
-                        <span className="badge green">Reply</span>
-                      )}
-                    </td>
-
-                    {/* Reply box */}
-                    <td className="action-col">
-                      {c.status === "Replied" ? (
-                        <div className="sent">
-                          <CheckCircle size={16} /> Sent
-                        </div>
-                      ) : (
-                        <div className="reply-row">
-                          <select
-                            className="reply-type-select"
-                            value={replyType[c.id] || "quote"}
-                            onChange={(e) =>
-                              setReplyType({
-                                ...replyType,
-                                [c.id]: e.target.value
-                              })
-                            }
-                          >
-                            <option value="quote">Quote Tweet</option>
-                            <option value="reply">Reply</option>
-                          </select>
-
-                          <input
-                            placeholder="Type reply…"
-                            value={replyInput[c.id] || ""}
-                            onChange={(e) =>
-                              setReplyInput({
-                                ...replyInput,
-                                [c.id]: e.target.value
-                              })
-                            }
-                            disabled={c.status === "needs_reply"}
-                          />
-
-                          <button
-                            className="btn primary"
-                            onClick={() => handleSendReply(c.id, c.user)}
-                            disabled={c.status === "needs_reply"}
-                          >
-                            <Send size={16} />
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      {/* BOT LOG CONSOLE */}
-      <section className="log-console-card">
-        <div className="console-header">
-          <Terminal size={18} />
-          <h2>Bot Console</h2>
-        </div>
-
-        <div className="console-window">
-          {botLogs.slice(-200).map((log, i) => (
-            <div key={i} className="console-line">
-              {log}
+      <div className="dashboard-grid">
+        
+        {/* LEFT COLUMN: MAIN CONTENT */}
+        <main className="main-content">
+          
+          {/* STATS ROW */}
+          <div className="stats-row">
+            <div className="stat-card">
+              <div className="stat-icon bg-blue"><MessageSquare size={20}/></div>
+              <div>
+                <div className="stat-label">Total Tickets</div>
+                <div className="stat-value">{complaints.length}</div>
+              </div>
             </div>
-          ))}
-        </div>
-      </section>
+            <div className="stat-card">
+              <div className="stat-icon bg-amber"><AlertCircle size={20}/></div>
+              <div>
+                <div className="stat-label">Pending</div>
+                <div className="stat-value warning">{pendingCount}</div>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon bg-green"><CheckCircle size={20}/></div>
+              <div>
+                <div className="stat-label">Resolved</div>
+                <div className="stat-value success">{repliedCount}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* TABLE SECTION */}
+          <div className="table-container">
+            <div className="section-header">
+              <h2><LayoutDashboard size={18}/> Priority Queue</h2>
+            </div>
+
+            {loading ? (
+              <div className="loader">Fetching data...</div>
+            ) : complaints.length === 0 ? (
+              <div className="empty-state">No complaints found.</div>
+            ) : (
+              <div className="table-responsive">
+                <table className="modern-table">
+                  <thead>
+                    <tr>
+                      <th width="140">Category</th>
+                      <th>Passenger Issue</th>
+                      <th width="120">Status</th>
+                      <th width="280">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {complaints.map((c) => (
+                      <tr key={c.id}>
+                        <td>
+                          <div className={`chip ${c.category.replace(/\s/g, '').toLowerCase()}`}>
+                            {getIcon(c.category)}
+                            {c.category}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="tweet-content">
+                            <span className="user-handle">@{c.user}</span>
+                            <p>{c.text}</p>
+                            <span className="meta-info">Confidence: {(c.confidence * 100).toFixed(0)}%</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`status-dot ${c.status === "Replied" ? "s-green" : c.status === "needs_reply" ? "s-amber" : "s-blue"}`}>
+                             ● {c.status}
+                          </span>
+                        </td>
+                        <td>
+                          {c.status === "Replied" ? (
+                             <div className="replied-badge">
+                               <CheckCircle size={14} /> Replied via {c.replyType}
+                             </div>
+                          ) : (
+                            <div className="action-box">
+                               <div className="input-group">
+                                  <select 
+                                    className="type-select"
+                                    value={replyType[c.id] || "quote"}
+                                    onChange={(e) => setReplyType({...replyType, [c.id]: e.target.value})}
+                                  >
+                                    <option value="quote">Quote</option>
+                                    <option value="reply">Reply</option>
+                                  </select>
+                                  <input 
+                                    type="text" 
+                                    placeholder="Write response..." 
+                                    value={replyInput[c.id] || ""}
+                                    onChange={(e) => setReplyInput({...replyInput, [c.id]: e.target.value})}
+                                    disabled={c.status === "needs_reply"}
+                                  />
+                                  <button 
+                                    className="btn-send"
+                                    onClick={() => handleSendReply(c.id)}
+                                    disabled={c.status === "needs_reply"}
+                                  >
+                                    <Send size={14} />
+                                  </button>
+                               </div>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </main>
+
+        {/* RIGHT COLUMN: CONSOLE */}
+        <aside className="sidebar-console">
+          <div className="console-card">
+            <div className="console-header">
+              <Terminal size={16} />
+              <span>System Logs</span>
+              <div className="console-status online"></div>
+            </div>
+            <div className="console-body">
+              {botLogs.slice(-100).map((log, i) => (
+                <div key={i} className="log-line">
+                  <span className="log-arrow">➜</span> {log}
+                </div>
+              ))}
+              <div ref={consoleEndRef} />
+            </div>
+          </div>
+        </aside>
+
+      </div>
     </div>
   );
 }
+
+// -------------------
+// CSS STYLES
+// -------------------
+/* Paste this into App.css */
