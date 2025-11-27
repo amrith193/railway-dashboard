@@ -8,7 +8,6 @@
 //   orderBy,
 //   doc,
 //   updateDoc,
-//   getDocs,
 //   deleteDoc,
 //   serverTimestamp
 // } from "firebase/firestore";
@@ -20,9 +19,7 @@
 //   Activity,
 //   Send,
 //   CheckCircle,
-//   RefreshCw,
 //   Terminal,
-//   MessageSquare,
 //   AlertCircle,
 //   LayoutDashboard,
 //   Trash2,
@@ -32,10 +29,96 @@
 //   Lock,
 //   User,
 //   TrainFront,
-//   LogOut
+//   LogOut,
+//   Share2,
+//   History,
+//   Building2,
+//   Mail,
+//   MessageSquare,
+//   Filter
 // } from "lucide-react";
 
 // import "./App.css";
+
+// /* =========================================
+//    CONSTANTS & CONFIG
+//    ========================================= */
+
+// // Department Email Mapping
+// const DEPARTMENT_EMAILS = {
+//   Mangalore: "mangalorerailway@gmail.com",
+//   Bangalore: "bangalorerailway@gmail.com",
+//   Delhi: "delhirailway@gmail.com",
+//   Mumbai: "mumbairailway@gmail.com"
+// };
+
+// const DEPARTMENTS = Object.keys(DEPARTMENT_EMAILS);
+
+// const CATEGORY_MAP = {
+//   Cleanliness: ["clean", "dirty", "washroom", "seat dirty", "stinks", "dustbin"],
+//   Safety: ["danger", "unsafe", "door", "fight", "theft", "harassment"],
+//   "Staff behavior": ["rude", "misbehaved", "staff", "tc", "tte", "ticket collector"],
+//   Food: ["food", "pantry", "meal", "water", "tea", "coffee", "lunch"],
+//   "Train Delay": ["late", "delay", "slow", "stopped", "waiting"],
+//   Medical: ["medical", "doctor", "emergency", "sick", "ill", "heart"]
+// };
+
+// const STATION_MAP = {
+//   Bangalore: ["bangalore", "blr", "bengaluru", "yesvantpur", "krantivira"],
+//   Mangalore: ["mangalore", "mngl", "udupi", "surathkal"],
+//   Delhi: ["delhi", "ndls", "new delhi", "hazrat", "anand vihar"],
+//   Mumbai: ["mumbai", "bct", "mumbai cst", "mumbai central", "bandra"]
+// };
+
+// /* =========================================
+//    HELPER FUNCTIONS
+//    ========================================= */
+
+// const autoDetectCategory = (text) => {
+//   if (!text) return "Unclassified";
+//   const lower = text.toLowerCase();
+//   for (const [category, keywords] of Object.entries(CATEGORY_MAP)) {
+//     if (keywords.some((k) => lower.includes(k))) return category;
+//   }
+//   return "Unclassified";
+// };
+
+// const autoDetectStation = (text) => {
+//   if (!text) return null;
+//   const lower = text.toLowerCase();
+//   for (const [station, keywords] of Object.entries(STATION_MAP)) {
+//     for (const k of keywords) {
+//       if (lower.includes(k)) return station;
+//     }
+//   }
+//   return null;
+// };
+
+// const extractTrainNumbers = (text) => {
+//   if (!text) return [];
+//   const matches = text.match(/\b\d{4,6}\b/g);
+//   return matches ? Array.from(new Set(matches)) : [];
+// };
+
+// const sanitizeClass = (str) => (str || "").replace(/\s/g, "").toLowerCase();
+
+// const getIcon = (category) => {
+//   switch (category) {
+//     case "Safety": return <Shield className="icon safety" size={18} />;
+//     case "Train Delay": return <Clock className="icon delay" size={18} />;
+//     case "Food": return <Utensils className="icon food" size={18} />;
+//     case "Medical": return <Activity className="icon medical" size={18} />;
+//     case "Cleanliness": return <span className="icon-emoji">✨</span>;
+//     case "Staff behavior": return <span className="icon-emoji">👮‍♂️</span>;
+//     default: return <span className="icon-emoji">🚂</span>;
+//   }
+// };
+
+// const safeDateFromTimestamp = (ts) => {
+//   if (!ts) return null;
+//   if (typeof ts === "object" && ts.seconds) return new Date(ts.seconds * 1000);
+//   try { return new Date(ts); } catch { return null; }
+// };
 
 // /* =========================================
 //    LOGIN COMPONENT
@@ -47,26 +130,22 @@
 
 //   const handleLogin = (e) => {
 //     e.preventDefault();
-//     // Hardcoded Credentials
 //     if (email === "adminrailway@gmail.com" && password === "admin") {
-//       // FIX: Save to LocalStorage
 //       localStorage.setItem("railway_admin_session", "true");
 //       onLogin(true);
 //     } else {
-//       setError("Invalid credentials. Please try again.");
+//       setError("Invalid credentials.");
 //     }
 //   };
 
 //   return (
 //     <div className="login-root">
 //       <div className="login-overlay"></div>
-      
-//       {/* Official Top Bar */}
 //       <div className="govt-header">
 //         <div className="govt-content">
-//           <img 
-//             src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQp5irZYE8Y-XuGPtFIacuFv-F4Q86WuCie7g&s" 
-//             alt="Emblem" 
+//           <img
+//             src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
+//             alt="Emblem"
 //             className="emblem"
 //           />
 //           <div className="govt-text">
@@ -88,23 +167,23 @@
 //         <form onSubmit={handleLogin} className="login-form">
 //           <div className="input-group-login">
 //             <User size={18} className="input-icon" />
-//             <input 
-//               type="email" 
-//               placeholder="Email Address" 
+//             <input
+//               type="email"
+//               placeholder="Email Address"
 //               value={email}
 //               onChange={(e) => setEmail(e.target.value)}
-//               required 
+//               required
 //             />
 //           </div>
 
 //           <div className="input-group-login">
 //             <Lock size={18} className="input-icon" />
-//             <input 
-//               type="password" 
-//               placeholder="Password" 
+//             <input
+//               type="password"
+//               placeholder="Password"
 //               value={password}
 //               onChange={(e) => setPassword(e.target.value)}
-//               required 
+//               required
 //             />
 //           </div>
 
@@ -114,127 +193,123 @@
 //             Secure Login
 //           </button>
 //         </form>
-
-//         <div className="login-footer">
-//           <p>© 2024 Center for Railway Information Systems (CRIS)</p>
-//         </div>
 //       </div>
 //     </div>
 //   );
 // };
 
 // /* =========================================
-//    DASHBOARD LOGIC
+//    UI COMPONENTS
 //    ========================================= */
 
-// /* -----------------------------
-//   CATEGORY MAP + AUTO-DETECT
-// ------------------------------*/
-// const CATEGORY_MAP = {
-//   Cleanliness: ["clean", "dirty", "washroom", "seat dirty"],
-//   Safety: ["danger", "unsafe", "door", "fight"],
-//   "Staff behavior": ["rude", "misbehaved", "staff", "tc", "tte"],
-//   Food: ["food", "pantry", "meal", "water"],
-//   "Train Delay": ["late", "delay", "slow"],
-//   Medical: ["medical", "doctor", "emergency"]
-// };
-
-// const autoDetectCategory = (text) => {
-//   if (!text) return "Unclassified";
-//   const lower = text.toLowerCase();
-
-//   for (const [category, keywords] of Object.entries(CATEGORY_MAP)) {
-//     if (keywords.some((k) => lower.includes(k))) {
-//       return category;
+// // Toast Notification
+// const Toast = ({ show, message, type = "success", onClose }) => {
+//   useEffect(() => {
+//     if (show) {
+//       const timer = setTimeout(onClose, 4000);
+//       return () => clearTimeout(timer);
 //     }
-//   }
-//   return "Unclassified";
+//   }, [show, onClose]);
+
+//   if (!show) return null;
+
+//   return (
+//     <div className={`toast-container ${type}`}>
+//       <div className="toast-content">
+//         {type === "success" ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+//         <span>{message}</span>
+//       </div>
+//       <button onClick={onClose} className="toast-close"><X size={16}/></button>
+//     </div>
+//   );
 // };
 
-// const sanitizeClass = (str) => (str || "").replace(/\s/g, "").toLowerCase();
-
-// const getIcon = (category) => {
-//   switch (category) {
-//     case "Safety":
-//       return <Shield className="icon safety" size={18} />;
-//     case "Train Delay":
-//       return <Clock className="icon delay" size={18} />;
-//     case "Food":
-//       return <Utensils className="icon food" size={18} />;
-//     case "Medical":
-//       return <Activity className="icon medical" size={18} />;
-//     case "Cleanliness":
-//       return <span className="icon-emoji">✨</span>;
-//     case "Staff behavior":
-//       return <span className="icon-emoji">👮‍♂️</span>;
-//     default:
-//       return <span className="icon-emoji">🚂</span>;
-//   }
-// };
-
-// /* -----------------------------
-//   Confirmation Modal (reusable)
-// ------------------------------*/
-// function ConfirmModal({ open, title, message, confirmLabel = "Confirm", onCancel, onConfirm, danger = false }) {
+// // Generic Modal
+// function Modal({ open, title, onClose, children, footer }) {
 //   if (!open) return null;
-
 //   return (
 //     <div className="modal-overlay">
 //       <div className="modal">
-//         <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-//           <div style={{ marginTop: 4 }}>
-//             <div className={`modal-icon ${danger ? "danger" : "primary"}`}>
-//               {danger ? <Trash2 size={20} color="#991b1b" /> : <Check size={20} color="#1e3a8a" />}
-//             </div>
-//           </div>
-//           <div style={{ flex: 1 }}>
-//             <h3 style={{ margin: 0, fontSize: 16 }}>{title}</h3>
-//             <p style={{ marginTop: 8, marginBottom: 16, color: "#475569" }}>{message}</p>
-//             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-//               <button className="btn ghost" onClick={onCancel} style={{ minWidth: 96 }}>
-//                 Cancel
-//               </button>
-//               <button
-//                 className="btn"
-//                 onClick={onConfirm}
-//                 style={{
-//                   minWidth: 120,
-//                   background: danger ? "#ef4444" : "var(--primary)",
-//                   color: "white",
-//                 }}
-//               >
-//                 {confirmLabel}
-//               </button>
-//             </div>
-//           </div>
+//         <div className="modal-header">
+//           <h3>{title}</h3>
+//           <button onClick={onClose} className="btn-icon"><X size={20} /></button>
+//         </div>
+//         <div className="modal-body">{children}</div>
+//         {footer && <div className="modal-footer">{footer}</div>}
+//       </div>
+//     </div>
+//   );
+// }
+
+// // History Side Sheet
+// function HistoryModal({ open, onClose, historyItems }) {
+//   if (!open) return null;
+//   return (
+//     <div className="modal-overlay">
+//       <div className="history-sheet slide-in">
+//         <div className="history-header">
+//           <h2><History size={20}/> Forwarding History</h2>
+//           <button onClick={onClose} className="btn-icon"><X size={20} /></button>
+//         </div>
+//         <div className="history-list">
+//           {historyItems.length === 0 ? (
+//             <div className="empty-state">No records found.</div>
+//           ) : (
+//             historyItems.map((item) => {
+//               const email = item.forward_email || DEPARTMENT_EMAILS[item.forward_dept] || "N/A";
+//               return (
+//                 <div key={item.id} className="history-item">
+//                   <div className="h-item-header">
+//                     <span className="h-dept-badge">{item.forward_dept} Div</span>
+//                     <span className="h-time">
+//                       {item.replied_at ? safeDateFromTimestamp(item.replied_at).toLocaleString() : 'Just now'}
+//                     </span>
+//                   </div>
+                  
+//                   <div className="h-email-row">
+//                     <Mail size={12}/> Sent to: <span>{email}</span>
+//                   </div>
+
+//                   <div className="h-note">
+//                     <strong>Note:</strong> {item.admin_reply_text}
+//                   </div>
+//                   <div className="h-ref">Ref Ticket: @{item.user}</div>
+//                 </div>
+//               );
+//             })
+//           )}
 //         </div>
 //       </div>
 //     </div>
 //   );
 // }
 
-// /* -----------------------------
-//   Dashboard Component
-// ------------------------------*/
+// /* =========================================
+//    DASHBOARD MAIN
+//    ========================================= */
 // function AdminDashboard({ onLogout }) {
 //   const [complaints, setComplaints] = useState([]);
-//   const [replyInput, setReplyInput] = useState({});
-//   const [replyType, setReplyType] = useState({}); // id => "quote"|"reply"
-//   const [sending, setSending] = useState({}); // id => boolean (for send button)
 //   const [botLogs, setBotLogs] = useState([]);
 //   const [loading, setLoading] = useState(true);
 
-//   // UI state
-//   const [activeTab, setActiveTab] = useState("All"); // All | Pending | Resolved
-//   const [selectedIds, setSelectedIds] = useState(new Set());
-//   const [selectAllChecked, setSelectAllChecked] = useState(false);
-//   const [modalState, setModalState] = useState({ open: false, type: null, payload: null });
+//   // Filters
+//   const [activeTab, setActiveTab] = useState("Pending"); 
 //   const [searchQ, setSearchQ] = useState("");
 //   const [categoryFilter, setCategoryFilter] = useState("All");
+//   const [departmentFilter, setDepartmentFilter] = useState("All"); // New Department Filter State
 
+//   // Modals & Action State
+//   const [composeModal, setComposeModal] = useState({ open: false, item: null });
+//   const [historyOpen, setHistoryOpen] = useState(false);
+//   const [messageText, setMessageText] = useState("");
+//   const [selectedDept, setSelectedDept] = useState(DEPARTMENTS[0]);
+//   const [isSending, setIsSending] = useState(false);
+
+//   // Feedback
+//   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
 //   const consoleEndRef = useRef(null);
 
-//   // Live logs
+//   // -- Listeners --
 //   useEffect(() => {
 //     const logDoc = doc(db, "logs", "bot");
 //     const unsub = onSnapshot(logDoc, (snap) => {
@@ -243,241 +318,116 @@
 //     return () => unsub();
 //   }, []);
 
+//   useEffect(() => { consoleEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [botLogs]);
+
 //   useEffect(() => {
-//     consoleEndRef.current?.scrollIntoView({ behavior: "smooth" });
-//   }, [botLogs]);
-
-//   // Live complaints listener
-//   useEffect(() => {
-//     const ref = collection(db, "complaints");
-//     const q = query(ref, orderBy("timestamp", "desc"));
-
-//     const unsub = onSnapshot(
-//       q,
-//       async (snap) => {
-//         try {
-//           const arr = [];
-//           const updates = [];
-
-//           for (const d of snap.docs) {
-//             const data = d.data();
-//             const detectedCategory = autoDetectCategory(data.text);
-//             if (detectedCategory !== data.category) {
-//               updates.push(updateDoc(doc(db, "complaints", d.id), { category: detectedCategory }));
-//             }
-
-//             arr.push({
-//               id: d.id,
-//               user: data.user || "unknown",
-//               text: data.text || "",
-//               category: detectedCategory,
-//               confidence: data.confidence ?? 0,
-//               status: data.status || "Pending",
-//               replyType: data.replyType || "quote",
-//               timestamp: data.timestamp || null
-//             });
-//           }
-
-//           if (updates.length > 0) {
-//             try {
-//               await Promise.all(updates);
-//             } catch (e) {
-//               console.warn("Auto-category update errors:", e);
-//             }
-//           }
-
-//           setComplaints(arr);
-//           setLoading(false);
-//         } catch (err) {
-//           console.error("Listener error:", err);
-//           setLoading(false);
-//         }
-//       },
-//       (err) => {
-//         console.error("Listener subscribe error:", err);
-//         setLoading(false);
-//       }
-//     );
-
-//     return () => unsub();
-//   }, []);
-
-//   // Manual refresh
-//   const handleManualRefresh = async () => {
-//     setLoading(true);
-//     try {
-//       const q = query(collection(db, "complaints"), orderBy("timestamp", "desc"));
-//       const snap = await getDocs(q);
-//       const arr = snap.docs.map((d) => {
+//     const q = query(collection(db, "complaints"), orderBy("timestamp", "desc"));
+//     const unsub = onSnapshot(q, (snap) => {
+//       const arr = snap.docs.map(d => {
 //         const data = d.data();
 //         return {
 //           id: d.id,
-//           user: data.user || "unknown",
-//           text: data.text || "",
-//           category: data.category || autoDetectCategory(data.text || ""),
-//           confidence: data.confidence ?? 0,
-//           status: data.status || "Pending",
-//           replyType: data.replyType || "quote",
-//           timestamp: data.timestamp || null
+//           ...data,
+//           category: autoDetectCategory(data.text) || data.category,
+//           station: autoDetectStation(data.text) || data.station || "Unknown",
+//           trainNumber: extractTrainNumbers(data.text)[0] || data.trainNumber || null,
 //         };
 //       });
 //       setComplaints(arr);
-//     } catch (err) {
-//       console.error("Refresh failed:", err);
-//     } finally {
 //       setLoading(false);
-//     }
-//   };
-
-//   /* Filter Logic */
-//   const filterByTab = (c) => {
-//     if (activeTab === "All") return true;
-//     if (activeTab === "Pending") return c.status === "Pending" || c.status === "needs_reply";
-//     if (activeTab === "Resolved") return c.status === "Replied";
-//     return true;
-//   };
-
-//   const filterByCategory = (c) => {
-//     if (categoryFilter === "All") return true;
-//     return c.category === categoryFilter;
-//   };
-
-//   const filterBySearch = (c) => {
-//     if (!searchQ) return true;
-//     const q = searchQ.toLowerCase();
-//     return (
-//       (c.text || "").toLowerCase().includes(q) ||
-//       (c.user || "").toLowerCase().includes(q) ||
-//       (c.category || "").toLowerCase().includes(q)
-//     );
-//   };
-
-//   const filteredComplaints = complaints.filter((c) => filterByTab(c) && filterByCategory(c) && filterBySearch(c));
-
-//   /* Bulk Logic */
-//   const toggleSelect = (id) => {
-//     setSelectedIds((prev) => {
-//       const clone = new Set(prev);
-//       if (clone.has(id)) clone.delete(id);
-//       else clone.add(id);
-//       setSelectAllChecked(false);
-//       return clone;
 //     });
-//   };
+//     return () => unsub();
+//   }, []);
 
-//   const toggleSelectAll = () => {
-//     if (selectAllChecked) {
-//       setSelectedIds(new Set());
-//       setSelectAllChecked(false);
+//   // -- Handlers --
+
+//   const handleOpenCompose = (item) => {
+//     setComposeModal({ open: true, item });
+//     setMessageText("");
+//     if (item.station && DEPARTMENT_EMAILS[item.station]) {
+//       setSelectedDept(item.station);
 //     } else {
-//       const ids = new Set(filteredComplaints.map((c) => c.id));
-//       setSelectedIds(ids);
-//       setSelectAllChecked(true);
+//       setSelectedDept("Mangalore"); // Default
 //     }
 //   };
 
-//   const openModal = ({ type, payload = null }) => {
-//     setModalState({ open: true, type, payload });
+//   const handleCloseCompose = () => {
+//     setComposeModal({ open: false, item: null });
+//     setIsSending(false);
 //   };
 
-//   const closeModal = () => setModalState({ open: false, type: null, payload: null });
+//   const handleSendMessage = async () => {
+//     if (!messageText.trim()) return alert("Please enter a message or instruction.");
+    
+//     setIsSending(true);
+//     const { id } = composeModal.item;
+    
+//     const targetEmail = DEPARTMENT_EMAILS[selectedDept];
 
-//   /* Actions */
-//   const confirmDeleteSingle = (id) => openModal({ type: "delete_single", payload: { id } });
-
-//   const performDeleteSingle = async (id) => {
-//     try {
-//       await deleteDoc(doc(db, "complaints", id));
-//       setComplaints((prev) => prev.filter((c) => c.id !== id));
-//       setSelectedIds((prev) => {
-//         const clone = new Set(prev);
-//         clone.delete(id);
-//         return clone;
-//       });
-//     } catch (err) {
-//       console.error("Delete failed:", err);
-//       alert("Failed to delete item.");
-//     } finally {
-//       closeModal();
-//     }
-//   };
-
-//   const confirmDeleteSelected = () => openModal({ type: "delete_bulk", payload: { ids: Array.from(selectedIds) } });
-
-//   const performDeleteBulk = async (ids = []) => {
-//     if (ids.length === 0) { closeModal(); return; }
-//     try {
-//       await Promise.all(ids.map((id) => deleteDoc(doc(db, "complaints", id))));
-//       setComplaints((prev) => prev.filter((c) => !ids.includes(c.id)));
-//       setSelectedIds(new Set());
-//       setSelectAllChecked(false);
-//     } catch (err) {
-//       console.error("Bulk delete failed:", err);
-//       alert("Bulk delete failed.");
-//     } finally {
-//       closeModal();
-//     }
-//   };
-
-//   const confirmResolveSelected = () => openModal({ type: "resolve_bulk", payload: { ids: Array.from(selectedIds) } });
-
-//   const performResolveBulk = async (ids = []) => {
-//     if (ids.length === 0) { closeModal(); return; }
-//     try {
-//       await Promise.all(
-//         ids.map((id) =>
-//           updateDoc(doc(db, "complaints", id), {
-//             status: "Replied",
-//             replyType: "bulk",
-//             admin_reply_text: "Marked resolved by admin (bulk)",
-//             resolvedAt: serverTimestamp()
-//           })
-//         )
-//       );
-//       setComplaints((prev) =>
-//         prev.map((c) => (ids.includes(c.id) ? { ...c, status: "Replied", replyType: "bulk" } : c))
-//       );
-//       setSelectedIds(new Set());
-//       setSelectAllChecked(false);
-//     } catch (err) {
-//       console.error("Bulk resolve failed:", err);
-//       alert("Bulk resolve failed.");
-//     } finally {
-//       closeModal();
-//     }
-//   };
-
-//   const handleSend = async (id) => {
-//     const type = replyType[id] || "quote";
-//     const text = (replyInput[id] || "").trim();
-//     if (!text) return alert("Enter a reply message.");
-
-//     setSending((s) => ({ ...s, [id]: true }));
 //     try {
 //       await updateDoc(doc(db, "complaints", id), {
-//         status: "needs_reply",
-//         admin_reply_text: text,
-//         replyType: type
+//         status: "Forwarded",
+//         admin_reply_text: messageText,
+//         forward_dept: selectedDept,
+//         forward_email: targetEmail,
+//         replyType: "forward",
+//         replied_at: serverTimestamp()
 //       });
-//       setComplaints((prev) => prev.map((c) => (c.id === id ? { ...c, status: "needs_reply", replyType: type } : c)));
-//       setReplyInput((p) => ({ ...p, [id]: "" }));
+
+//       setToast({ 
+//         show: true, 
+//         message: `Forwarded successfully to ${targetEmail}`, 
+//         type: "success" 
+//       });
+
+//       handleCloseCompose();
 //     } catch (err) {
-//       console.error("Send failed:", err);
-//       alert("Failed to send reply.");
+//       console.error(err);
+//       setToast({ show: true, message: "Failed to send message.", type: "error" });
 //     } finally {
-//       setSending((s) => ({ ...s, [id]: false }));
+//       setIsSending(false);
 //     }
 //   };
 
-//   const handleLogout = () => {
-//     // FIX: Clear LocalStorage on logout
-//     localStorage.removeItem("railway_admin_session");
-//     onLogout(false);
+//   const handleDelete = async (id) => {
+//     if(!window.confirm("Permanently delete this ticket?")) return;
+//     try {
+//       await deleteDoc(doc(db, "complaints", id));
+//       setToast({ show: true, message: "Ticket deleted", type: "success" });
+//     } catch(e) {
+//       console.error(e);
+//     }
 //   };
 
+//   // -- Filtering Logic --
+//   const filteredComplaints = complaints.filter(c => {
+//     const matchesSearch = !searchQ || 
+//       c.text?.toLowerCase().includes(searchQ.toLowerCase()) || 
+//       c.user?.toLowerCase().includes(searchQ.toLowerCase());
+    
+//     const matchesCat = categoryFilter === "All" || c.category === categoryFilter;
+    
+//     // Department Filter Logic
+//     const matchesDept = departmentFilter === "All" || (c.station || "Unknown") === departmentFilter;
+
+//     // TAB LOGIC (Matching specific status)
+//     if (activeTab === "Pending") {
+//       return (c.status === "Pending" || c.status === "needs_reply" || c.status === "Unclassified") && matchesSearch && matchesCat && matchesDept;
+//     }
+//     // "Resolved" button is removed, but logic remains if ever needed, else falls through
+//     if (activeTab === "Already Replied") {
+//       return (c.status === "Replied") && matchesSearch && matchesCat && matchesDept;
+//     }
+//     // "All" Tab
+//     return matchesSearch && matchesCat && matchesDept;
+//   });
+
+//   const historyList = complaints.filter(c => c.status === "Forwarded" || c.status === "Replied");
+
+//   // Stats Calculation
 //   const totalCount = complaints.length;
-//   const pendingCount = complaints.filter((c) => c.status === "Pending" || c.status === "needs_reply").length;
-//   const resolvedCount = complaints.filter((c) => c.status === "Replied").length;
+//   const pendingCount = complaints.filter(c => c.status === "Pending" || c.status === "needs_reply" || c.status === "Unclassified").length;
+//   const resolvedCount = complaints.filter(c => c.status === "Replied" || c.status === "Forwarded").length;
 
 //   return (
 //     <div className="app-root">
@@ -487,248 +437,283 @@
 //           <div className="brand-logo">🚆</div>
 //           <div>
 //             <h1>RailSeva Pro</h1>
-//             <span className="badge-pro">ADMIN DASHBOARD</span>
+//             <span className="badge-pro">ADMIN</span>
 //           </div>
 //         </div>
 
-//         <div className="nav-actions" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-//           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-//             <div style={{ position: "relative" }}>
-//               <input
-//                 placeholder="Search by text, user, category..."
+//         <div className="nav-actions">
+//            {/* CATEGORY DROPDOWN (Moved Here) */}
+//            <select 
+//              className="nav-select" 
+//              onChange={(e) => setCategoryFilter(e.target.value)} 
+//              value={categoryFilter}
+//            >
+//               <option value="All">All Categories</option>
+//               {Object.keys(CATEGORY_MAP).map(cat => <option key={cat} value={cat}>{cat}</option>)}
+//            </select>
+
+//            {/* DEPARTMENT DROPDOWN (New) */}
+//            <select 
+//              className="nav-select" 
+//              onChange={(e) => setDepartmentFilter(e.target.value)} 
+//              value={departmentFilter}
+//            >
+//               <option value="All">All Departments</option>
+//               {DEPARTMENTS.map(dept => <option key={dept} value={dept}>{dept}</option>)}
+//            </select>
+
+//            <div className="search-bar">
+//              <Search size={16} className="search-icon"/>
+//              <input 
+//                 placeholder="Search..." 
 //                 value={searchQ}
-//                 onChange={(e) => setSearchQ(e.target.value)}
-//                 style={{
-//                   padding: "8px 36px 8px 12px",
-//                   borderRadius: 8,
-//                   border: "1px solid var(--border)",
-//                   outline: "none",
-//                   width: 320,
-//                   background: "#fff"
-//                 }}
-//               />
-//               <Search style={{ position: "absolute", right: 10, top: 8, color: "#94a3b8" }} />
-//             </div>
-
-//             <select
-//               value={categoryFilter}
-//               onChange={(e) => setCategoryFilter(e.target.value)}
-//               style={{
-//                 borderRadius: 8,
-//                 padding: "8px 10px",
-//                 border: "1px solid var(--border)",
-//                 background: "white"
-//               }}
-//             >
-//               <option value="All">All categories</option>
-//               {Object.keys(CATEGORY_MAP).map((cat) => (
-//                 <option key={cat} value={cat}>
-//                   {cat}
-//                 </option>
-//               ))}
-//             </select>
-
-//             <button className="btn ghost" onClick={handleManualRefresh}>
-//               <RefreshCw size={16} /> Sync
-//             </button>
-            
-//             <button className="btn ghost" onClick={handleLogout} style={{color: '#ef4444', borderColor: '#ef4444'}}>
-//               <LogOut size={16} /> Logout
-//             </button>
-//           </div>
+//                 onChange={e => setSearchQ(e.target.value)}
+//              />
+//            </div>
+           
+//            <button className="btn outline" onClick={() => setHistoryOpen(true)} title="History">
+//              <History size={16} />
+//            </button>
+           
+//            <button className="btn outline logout" onClick={() => onLogout(false)} title="Logout">
+//              <LogOut size={16} />
+//            </button>
 //         </div>
 //       </nav>
 
 //       <div className="dashboard-grid">
 //         <main className="main-content">
-//           {/* STATS */}
-//           <div className="stats-row">
-//             <div className="stat-card" style={{ cursor: "pointer" }} onClick={() => setActiveTab("All")}>
-//               <div className="stat-icon bg-blue"><MessageSquare size={20} /></div>
-//               <div><div className="stat-label">Total Tickets</div><div className="stat-value">{totalCount}</div></div>
-//             </div>
-//             <div className="stat-card" style={{ cursor: "pointer" }} onClick={() => setActiveTab("Pending")}>
-//               <div className="stat-icon bg-amber"><AlertCircle size={20} /></div>
-//               <div><div className="stat-label">Pending</div><div className="stat-value warning">{pendingCount}</div></div>
-//             </div>
-//             <div className="stat-card" style={{ cursor: "pointer" }} onClick={() => setActiveTab("Resolved")}>
-//               <div className="stat-icon bg-green"><CheckCircle size={20} /></div>
-//               <div><div className="stat-label">Resolved</div><div className="stat-value success">{resolvedCount}</div></div>
-//             </div>
-//           </div>
-
-//           {/* TABLE */}
-//           <div className="table-container">
-//             <div className="section-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-//               <h2><LayoutDashboard size={18} /> Priority Queue</h2>
-//               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-//                 <button className={`btn ${activeTab === "All" ? "" : "ghost"}`} onClick={() => setActiveTab("All")}>All</button>
-//                 <button className={`btn ${activeTab === "Pending" ? "" : "ghost"}`} onClick={() => setActiveTab("Pending")}>Pending</button>
-//                 <button className={`btn ${activeTab === "Resolved" ? "" : "ghost"}`} onClick={() => setActiveTab("Resolved")}>Resolved</button>
+          
+//           {/* STATS CARDS */}
+//           <div className="stats-grid">
+//             <div className="stat-card">
+//               <div className="stat-icon-wrapper bg-blue-light text-blue">
+//                 <MessageSquare size={24} />
+//               </div>
+//               <div className="stat-details">
+//                 <span className="stat-label">Total Tickets</span>
+//                 <span className="stat-value">{totalCount}</span>
 //               </div>
 //             </div>
 
-//             {loading ? (
-//               <div style={{ padding: 20 }}>Fetching data...</div>
-//             ) : complaints.length === 0 ? (
-//               <div style={{ padding: 20 }}>No complaints found.</div>
-//             ) : (
-//               <div className="table-responsive" style={{ position: "relative" }}>
+//             <div className="stat-card">
+//               <div className="stat-icon-wrapper bg-orange-light text-orange">
+//                 <Clock size={24} />
+//               </div>
+//               <div className="stat-details">
+//                 <span className="stat-label">Pending</span>
+//                 <span className="stat-value">{pendingCount}</span>
+//               </div>
+//             </div>
+
+//             <div className="stat-card">
+//               <div className="stat-icon-wrapper bg-green-light text-green">
+//                 <CheckCircle size={24} />
+//               </div>
+//               <div className="stat-details">
+//                 <span className="stat-label">Resolved</span>
+//                 <span className="stat-value">{resolvedCount}</span>
+//               </div>
+//             </div>
+//           </div>
+
+//           {/* PRIORITY QUEUE HEADER + FILTERS */}
+//           <div className="section-header-row">
+//             <div className="section-title">
+//               <LayoutDashboard size={20} />
+//               <h2>Priority Queue</h2>
+//             </div>
+
+//             <div className="tabs-pill">
+//                <button 
+//                  className={`pill-tab ${activeTab === 'All' ? 'active' : ''}`} 
+//                  onClick={() => setActiveTab('All')}
+//                >
+//                  All
+//                </button>
+//                <button 
+//                  className={`pill-tab ${activeTab === 'Pending' ? 'active' : ''}`} 
+//                  onClick={() => setActiveTab('Pending')}
+//                >
+//                  Pending
+//                </button>
+//                {/* REMOVED RESOLVED BUTTON HERE AS REQUESTED */}
+//                <button 
+//                  className={`pill-tab ${activeTab === 'Already Replied' ? 'active' : ''}`} 
+//                  onClick={() => setActiveTab('Already Replied')}
+//                >
+//                  Already Replied
+//                </button>
+//             </div>
+//           </div>
+
+//           {/* DATA TABLE */}
+//           <div className="table-card">
+//             {loading ? <div className="p-4">Loading...</div> : (
+//               <div className="table-scroll-container">
 //                 <table className="modern-table">
 //                   <thead>
 //                     <tr>
-//                       <th style={{ width: 48 }}><input type="checkbox" checked={selectAllChecked} onChange={toggleSelectAll} /></th>
-//                       <th width="140">Category</th>
-//                       <th>Passenger Issue</th>
-//                       <th width="140">Status</th>
-//                       <th width="360">Action</th>
+//                       <th width="130">Category</th>
+//                       <th>Issue Details</th>
+//                       <th width="120">Location</th>
+//                       <th width="120">Status</th>
+//                       <th width="140" align="right">Action</th>
 //                     </tr>
 //                   </thead>
 //                   <tbody>
-//                     {filteredComplaints.map((c) => {
-//                       const isSelected = selectedIds.has(c.id);
-//                       const isSending = !!sending[c.id];
-//                       return (
-//                         <tr key={c.id} className={isSelected ? "selected-row" : ""}>
-//                           <td><input type="checkbox" checked={isSelected} onChange={() => toggleSelect(c.id)} /></td>
+//                     {filteredComplaints.length === 0 ? (
+//                       <tr><td colSpan="5" style={{textAlign:"center", padding: 40}}>No records found.</td></tr>
+//                     ) : (
+//                       filteredComplaints.map(c => (
+//                         <tr key={c.id}>
 //                           <td>
 //                             <div className={`chip ${sanitizeClass(c.category)}`}>
 //                               {getIcon(c.category)} {c.category}
 //                             </div>
 //                           </td>
 //                           <td>
-//                             <div className="tweet-content">
-//                               <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-//                                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-//                                   <span className="user-handle">@{c.user}</span>
-//                                   <div style={{ fontSize: 12, color: "#94a3b8" }}>
-//                                     {c.timestamp ? new Date(c.timestamp.seconds * 1000).toLocaleString() : ""}
-//                                   </div>
-//                                 </div>
-//                               </div>
-//                               <p>{c.text}</p>
-//                               <div className="meta-info">Confidence: {(c.confidence * 100).toFixed(0)}%</div>
+//                              <div className="ticket-info">
+//                                <div className="ticket-header">
+//                                  <span className="u-handle">@{c.user}</span>
+//                                  <span className="u-time">{c.timestamp ? safeDateFromTimestamp(c.timestamp).toLocaleString() : ''}</span>
+//                                </div>
+//                                <p className="ticket-text">{c.text}</p>
+//                                <div className="ticket-meta">
+//                                  Confidence: {(c.confidence * 100).toFixed(0)}% 
+//                                  {c.trainNumber && ` • Train: ${c.trainNumber}`}
+//                                </div>
+//                              </div>
+//                           </td>
+//                           <td>
+//                             <div className="location-cell">
+//                               <strong>{c.station}</strong>
+//                               <small>{c.trainNumber || "N/A"}</small>
 //                             </div>
 //                           </td>
 //                           <td>
-//                             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-//                               <span className={`status-dot ${c.status === "Replied" ? "s-green" : c.status === "needs_reply" ? "s-amber" : "s-blue"}`}>
-//                                 ● {c.status}
-//                               </span>
-//                               {isSending && <div className="tiny-spinner" title="Sending..." />}
-//                             </div>
+//                             <span className={`status-badge ${c.status === 'Pending' ? 'warn' : 'good'}`}>
+//                                {c.status}
+//                                {c.status === 'Forwarded' && <small>to {c.forward_dept}</small>}
+//                             </span>
 //                           </td>
-//                           <td>
-//                             {c.status === "Replied" ? (
-//                               <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "flex-end" }}>
-//                                 <div className="replied-badge" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-//                                   <CheckCircle size={14} /> Replied via {c.replyType}
-//                                 </div>
-//                                 <button className="btn ghost" onClick={() => confirmDeleteSingle(c.id)} title="Delete"><Trash2 size={14} /> Delete</button>
-//                               </div>
-//                             ) : (
-//                               <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "flex-end" }}>
-//                                 <input
-//                                   value={replyInput[c.id] || ""}
-//                                   onChange={(e) => setReplyInput((p) => ({ ...p, [c.id]: e.target.value }))}
-//                                   placeholder="Write response..."
-//                                   style={{ flex: 1, borderRadius: 8, padding: "8px 12px", border: "1px solid var(--border)" }}
-//                                 />
-//                                 <select
-//                                   value={replyType[c.id] || "quote"}
-//                                   onChange={(e) => setReplyType((p) => ({ ...p, [c.id]: e.target.value }))}
-//                                   style={{ borderRadius: 8, padding: "8px 10px", border: "1px solid var(--border)", background: "white" }}
-//                                 >
-//                                   <option value="quote">Quote</option>
-//                                   <option value="reply">Reply</option>
-//                                 </select>
-//                                 <button
-//                                   className="btn"
-//                                   onClick={() => handleSend(c.id)}
-//                                   disabled={sending[c.id]}
-//                                   style={{ background: "var(--primary)", color: "white", borderRadius: 8, padding: "8px 12px", display: "inline-flex", gap: 8, alignItems: "center" }}
-//                                 >
-//                                   {sending[c.id] ? <><span className="btn-spinner" /> Sending</> : <><Send size={14} /> Send</>}
-//                                 </button>
-//                                 <button className="btn ghost" onClick={() => confirmDeleteSingle(c.id)} title="Delete"><Trash2 size={14} /></button>
-//                               </div>
-//                             )}
+//                           <td align="right">
+//                              <div className="action-cell">
+//                                {c.status === 'Pending' || c.status === 'needs_reply' || c.status === 'Unclassified' ? (
+//                                  <button className="btn primary small" onClick={() => handleOpenCompose(c)}>
+//                                    <Share2 size={14}/> Take Action
+//                                  </button>
+//                                ) : (
+//                                  <div className="replied-check">
+//                                    <Check size={16}/> Done
+//                                  </div>
+//                                )}
+//                                <button className="btn icon-only" onClick={() => handleDelete(c.id)} title="Delete">
+//                                  <Trash2 size={14}/>
+//                                </button>
+//                              </div>
 //                           </td>
 //                         </tr>
-//                       );
-//                     })}
+//                       ))
+//                     )}
 //                   </tbody>
 //                 </table>
-//                 {selectedIds.size > 0 && (
-//                   <div className="bulk-action-bar">
-//                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-//                       <div style={{ fontWeight: 700 }}>{selectedIds.size} selected</div>
-//                       <button className="btn ghost" onClick={() => setSelectedIds(new Set())}><X size={14} /> Clear</button>
-//                     </div>
-//                     <div style={{ display: "flex", gap: 8 }}>
-//                       <button className="btn" onClick={confirmResolveSelected} style={{ background: "var(--primary)", color: "white" }}><Check size={14} /> Mark Selected Resolved</button>
-//                       <button className="btn" onClick={confirmDeleteSelected} style={{ background: "#ef4444", color: "white" }}><Trash2 size={14} /> Delete Selected</button>
-//                     </div>
-//                   </div>
-//                 )}
 //               </div>
 //             )}
 //           </div>
 //         </main>
 
-//         {/* RIGHT LOG CONSOLE */}
-//         <aside className="sidebar-console">
-//           <div className="console-card">
-//             <div className="console-header">
-//               <Terminal size={16} /><span>System Logs</span><div className="console-status online"></div>
+//         {/* LOGS SIDEBAR */}
+//         <aside className="sidebar">
+//           <div className="console-wrapper">
+//             <div className="console-head">
+//               <Terminal size={14}/> System Logs
 //             </div>
-//             <div className="console-body">
-//               {botLogs.slice(-100).map((log, i) => (
-//                 <div key={i} className="log-line"><span className="log-arrow">➜</span> {log}</div>
+//             <div className="console-logs">
+//               {botLogs.slice(-50).map((l, i) => (
+//                 <div key={i} className="log-row"><span>{`>`}</span> {l}</div>
 //               ))}
-//               <div ref={consoleEndRef} />
+//               <div ref={consoleEndRef}/>
 //             </div>
 //           </div>
 //         </aside>
 //       </div>
 
-//       <ConfirmModal
-//         open={modalState.open}
-//         title={modalState.type === "delete_single" ? "Delete complaint" : modalState.type === "delete_bulk" ? `Delete ${modalState.payload?.ids?.length || 0} complaint(s)` : modalState.type === "resolve_bulk" ? `Mark ${modalState.payload?.ids?.length || 0} complaint(s) as resolved` : "Confirm action"}
-//         message={modalState.type === "delete_single" ? "This will permanently delete the complaint. This action cannot be undone." : modalState.type === "delete_bulk" ? `Are you sure you want to permanently delete ${modalState.payload?.ids?.length || 0} selected complaint(s)?` : modalState.type === "resolve_bulk" ? `Mark ${modalState.payload?.ids?.length || 0} selected complaint(s) as resolved.` : ""}
-//         confirmLabel={modalState.type === "delete_single" || modalState.type === "delete_bulk" ? "Delete" : "Confirm"}
-//         danger={modalState.type === "delete_single" || modalState.type === "delete_bulk"}
-//         onCancel={closeModal}
-//         onConfirm={() => {
-//           if (modalState.type === "delete_single") performDeleteSingle(modalState.payload.id);
-//           else if (modalState.type === "delete_bulk") performDeleteBulk(modalState.payload.ids);
-//           else if (modalState.type === "resolve_bulk") performResolveBulk(modalState.payload.ids);
-//           else closeModal();
-//         }}
+//       {/* --- MODALS --- */}
+
+//       {/* COMPOSE MODAL */}
+//       <Modal 
+//         open={composeModal.open} 
+//         onClose={handleCloseCompose}
+//         title="Forward Ticket"
+//         footer={
+//           <div className="compose-footer">
+//              <button className="btn ghost" onClick={handleCloseCompose}>Cancel</button>
+//              <button className="btn primary" onClick={handleSendMessage} disabled={isSending}>
+//                {isSending ? "Sending..." : "Forward Now"} <Send size={16}/>
+//              </button>
+//           </div>
+//         }
+//       >
+//         <div className="compose-form">
+//            <label>Passenger Complaint</label>
+//            <div className="quote-box">
+//              "{composeModal.item?.text}"
+//            </div>
+
+//            <label>Select Department (Recipient)</label>
+//            <div className="select-wrapper">
+//              <Building2 size={16} className="sel-icon"/>
+//              <select 
+//                value={selectedDept} 
+//                onChange={(e) => setSelectedDept(e.target.value)}
+//              >
+//                {DEPARTMENTS.map(d => (
+//                  <option key={d} value={d}>
+//                    {d} Division ({DEPARTMENT_EMAILS[d]})
+//                  </option>
+//                ))}
+//              </select>
+//            </div>
+
+//            <label>Action Note / Message</label>
+//            <textarea 
+//              className="form-textarea"
+//              rows="4"
+//              placeholder="Enter a message to reply"
+//              value={messageText}
+//              onChange={(e) => setMessageText(e.target.value)}
+//            />
+//         </div>
+//       </Modal>
+
+//       {/* HISTORY SHEET */}
+//       <HistoryModal 
+//         open={historyOpen} 
+//         onClose={() => setHistoryOpen(false)} 
+//         historyItems={historyList}
 //       />
+
+//       {/* TOAST */}
+//       <Toast 
+//         show={toast.show} 
+//         message={toast.message} 
+//         type={toast.type} 
+//         onClose={() => setToast({ ...toast, show: false })} 
+//       />
+
 //     </div>
 //   );
 // }
 
-// /* =========================================
-//    MAIN APP ORCHESTRATOR
-//    ========================================= */
 // export default function App() {
-//   // FIX: Initialize state from LocalStorage so refresh doesn't log out
-//   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-//     return localStorage.getItem("railway_admin_session") === "true";
-//   });
-
-//   // If not logged in, show Login Page
-//   if (!isAuthenticated) {
-//     return <LoginPage onLogin={setIsAuthenticated} />;
-//   }
-
-//   // If logged in, show Dashboard
+//   const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem("railway_admin_session") === "true");
+//   if (!isAuthenticated) return <LoginPage onLogin={setIsAuthenticated} />;
 //   return <AdminDashboard onLogout={setIsAuthenticated} />;
 // }
 
-// src/App.jsx 
+
+// src/App.jsx
 import React, { useEffect, useState, useRef } from "react";
 import { db } from "./firebase";
 import {
@@ -738,7 +723,6 @@ import {
   orderBy,
   doc,
   updateDoc,
-  getDocs,
   deleteDoc,
   serverTimestamp
 } from "firebase/firestore";
@@ -750,9 +734,7 @@ import {
   Activity,
   Send,
   CheckCircle,
-  RefreshCw,
   Terminal,
-  MessageSquare,
   AlertCircle,
   LayoutDashboard,
   Trash2,
@@ -762,10 +744,97 @@ import {
   Lock,
   User,
   TrainFront,
-  LogOut
+  LogOut,
+  Share2,
+  History,
+  Building2,
+  Mail,
+  MessageSquare,
+  Filter
 } from "lucide-react";
 
 import "./App.css";
+
+/* =========================================
+   CONSTANTS & CONFIG
+   ========================================= */
+
+// Department Email Mapping
+// Updated Delhi & Mangalore to the addresses you provided earlier.
+const DEPARTMENT_EMAILS = {
+  Mangalore: "Mangalorerailwaystation@gmail.com",
+  Bangalore: "bangalorerailway@gmail.com",
+  Delhi: "delhirailwaystationdel@gmail.com",
+  Mumbai: "mumbairailway@gmail.com"
+};
+
+const DEPARTMENTS = Object.keys(DEPARTMENT_EMAILS);
+
+const CATEGORY_MAP = {
+  Cleanliness: ["clean", "dirty", "washroom", "seat dirty", "stinks", "dustbin"],
+  Safety: ["danger", "unsafe", "door", "fight", "theft", "harassment"],
+  "Staff behavior": ["rude", "misbehaved", "staff", "tc", "tte", "ticket collector"],
+  Food: ["food", "pantry", "meal", "water", "tea", "coffee", "lunch"],
+  "Train Delay": ["late", "delay", "slow", "stopped", "waiting"],
+  Medical: ["medical", "doctor", "emergency", "sick", "ill", "heart"]
+};
+
+const STATION_MAP = {
+  Bangalore: ["bangalore", "blr", "bengaluru", "yesvantpur", "krantivira"],
+  Mangalore: ["mangalore", "mngl", "udupi", "surathkal"],
+  Delhi: ["delhi", "ndls", "new delhi", "hazrat", "anand vihar"],
+  Mumbai: ["mumbai", "bct", "mumbai cst", "mumbai central", "bandra"]
+};
+
+/* =========================================
+   HELPER FUNCTIONS
+   ========================================= */
+
+const autoDetectCategory = (text) => {
+  if (!text) return "Unclassified";
+  const lower = text.toLowerCase();
+  for (const [category, keywords] of Object.entries(CATEGORY_MAP)) {
+    if (keywords.some((k) => lower.includes(k))) return category;
+  }
+  return "Unclassified";
+};
+
+const autoDetectStation = (text) => {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+  for (const [station, keywords] of Object.entries(STATION_MAP)) {
+    for (const k of keywords) {
+      if (lower.includes(k)) return station;
+    }
+  }
+  return null;
+};
+
+const extractTrainNumbers = (text) => {
+  if (!text) return [];
+  const matches = text.match(/\b\d{4,6}\b/g);
+  return matches ? Array.from(new Set(matches)) : [];
+};
+
+const sanitizeClass = (str) => (str || "").replace(/\s/g, "").toLowerCase();
+
+const getIcon = (category) => {
+  switch (category) {
+    case "Safety": return <Shield className="icon safety" size={18} />;
+    case "Train Delay": return <Clock className="icon delay" size={18} />;
+    case "Food": return <Utensils className="icon food" size={18} />;
+    case "Medical": return <Activity className="icon medical" size={18} />;
+    case "Cleanliness": return <span className="icon-emoji">✨</span>;
+    case "Staff behavior": return <span className="icon-emoji">👮‍♂️</span>;
+    default: return <span className="icon-emoji">🚂</span>;
+  }
+};
+
+const safeDateFromTimestamp = (ts) => {
+  if (!ts) return null;
+  if (typeof ts === "object" && ts.seconds) return new Date(ts.seconds * 1000);
+  try { return new Date(ts); } catch { return null; }
+};
 
 /* =========================================
    LOGIN COMPONENT
@@ -777,25 +846,21 @@ const LoginPage = ({ onLogin }) => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    // Hardcoded Credentials
     if (email === "adminrailway@gmail.com" && password === "admin") {
-      // FIX: Save to LocalStorage
       localStorage.setItem("railway_admin_session", "true");
       onLogin(true);
     } else {
-      setError("Invalid credentials. Please try again.");
+      setError("Invalid credentials.");
     }
   };
 
   return (
     <div className="login-root">
       <div className="login-overlay"></div>
-
-      {/* Official Top Bar */}
       <div className="govt-header">
         <div className="govt-content">
           <img
-            src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQp5irZYE8Y-XuGPtFIacuFv-F4Q86WuCie7g&s"
+            src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
             alt="Emblem"
             className="emblem"
           />
@@ -844,166 +909,126 @@ const LoginPage = ({ onLogin }) => {
             Secure Login
           </button>
         </form>
-
-        <div className="login-footer">
-          <p>© 2024 Center for Railway Information Systems (CRIS)</p>
-        </div>
       </div>
     </div>
   );
 };
 
 /* =========================================
-   DASHBOARD LOGIC
+   UI COMPONENTS
    ========================================= */
 
-/* -----------------------------
-  CATEGORY MAP + AUTO-DETECT
-------------------------------*/
-const CATEGORY_MAP = {
-  Cleanliness: ["clean", "dirty", "washroom", "seat dirty"],
-  Safety: ["danger", "unsafe", "door", "fight"],
-  "Staff behavior": ["rude", "misbehaved", "staff", "tc", "tte"],
-  Food: ["food", "pantry", "meal", "water"],
-  "Train Delay": ["late", "delay", "slow"],
-  Medical: ["medical", "doctor", "emergency"]
-};
-
-const autoDetectCategory = (text) => {
-  if (!text) return "Unclassified";
-  const lower = text.toLowerCase();
-
-  for (const [category, keywords] of Object.entries(CATEGORY_MAP)) {
-    if (keywords.some((k) => lower.includes(k))) {
-      return category;
+// Toast Notification
+const Toast = ({ show, message, type = "success", onClose }) => {
+  useEffect(() => {
+    if (show) {
+      const timer = setTimeout(onClose, 4000);
+      return () => clearTimeout(timer);
     }
-  }
-  return "Unclassified";
+  }, [show, onClose]);
+
+  if (!show) return null;
+
+  return (
+    <div className={`toast-container ${type}`}>
+      <div className="toast-content">
+        {type === "success" ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+        <span>{message}</span>
+      </div>
+      <button onClick={onClose} className="toast-close"><X size={16}/></button>
+    </div>
+  );
 };
 
-/* -----------------------------
-  STATION / LOCATION DETECTION
-  Option B: auto-detect station from tweet text
-  and Option A: store station into complaint doc
-------------------------------*/
-const STATION_MAP = {
-  Bangalore: ["bangalore", "blr", "bengaluru", "yesvantpur", "kannada"],
-  Mangalore: ["mangalore", "manglore", "mngl", "udupi", "mangalore junction"],
-  Delhi: ["delhi", "ndls", "new delhi", "hazrat", "delhis"],
-  Mumbai: ["mumbai", "bct", "mumbai cst", "mumbai central", "mumbai central"]
-};
-
-const STATIONS = ["All", "Bangalore", "Mangalore", "Delhi", "Mumbai"];
-
-const autoDetectStation = (text) => {
-  if (!text) return null;
-  const lower = text.toLowerCase();
-  for (const [station, keywords] of Object.entries(STATION_MAP)) {
-    for (const k of keywords) {
-      if (lower.includes(k)) return station;
-    }
-  }
-  return null;
-};
-
-/* -----------------------------
-  TRAIN NUMBER EXTRACTION
-  Indian trains are typically 4-6 digits; grab the first sensible match
-------------------------------*/
-const extractTrainNumbers = (text) => {
-  if (!text) return [];
-  // match 4,5 or 6 digit numbers that are likely train numbers
-  const matches = text.match(/\b\d{4,6}\b/g);
-  if (!matches) return [];
-  // dedupe
-  return Array.from(new Set(matches));
-};
-
-const sanitizeClass = (str) => (str || "").replace(/\s/g, "").toLowerCase();
-
-const getIcon = (category) => {
-  switch (category) {
-    case "Safety":
-      return <Shield className="icon safety" size={18} />;
-    case "Train Delay":
-      return <Clock className="icon delay" size={18} />;
-    case "Food":
-      return <Utensils className="icon food" size={18} />;
-    case "Medical":
-      return <Activity className="icon medical" size={18} />;
-    case "Cleanliness":
-      return <span className="icon-emoji">✨</span>;
-    case "Staff behavior":
-      return <span className="icon-emoji">👮‍♂️</span>;
-    default:
-      return <span className="icon-emoji">🚂</span>;
-  }
-};
-
-/* -----------------------------
-  Confirmation Modal (reusable)
-------------------------------*/
-function ConfirmModal({ open, title, message, confirmLabel = "Confirm", onCancel, onConfirm, danger = false }) {
+// Generic Modal
+function Modal({ open, title, onClose, children, footer }) {
   if (!open) return null;
-
   return (
     <div className="modal-overlay">
       <div className="modal">
-        <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-          <div style={{ marginTop: 4 }}>
-            <div className={`modal-icon ${danger ? "danger" : "primary"}`}>
-              {danger ? <Trash2 size={20} color="#991b1b" /> : <Check size={20} color="#1e3a8a" />}
-            </div>
-          </div>
-          <div style={{ flex: 1 }}>
-            <h3 style={{ margin: 0, fontSize: 16 }}>{title}</h3>
-            <p style={{ marginTop: 8, marginBottom: 16, color: "#475569" }}>{message}</p>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button className="btn ghost" onClick={onCancel} style={{ minWidth: 96 }}>
-                Cancel
-              </button>
-              <button
-                className="btn"
-                onClick={onConfirm}
-                style={{
-                  minWidth: 120,
-                  background: danger ? "#ef4444" : "var(--primary)",
-                  color: "white",
-                }}
-              >
-                {confirmLabel}
-              </button>
-            </div>
-          </div>
+        <div className="modal-header">
+          <h3>{title}</h3>
+          <button onClick={onClose} className="btn-icon"><X size={20} /></button>
+        </div>
+        <div className="modal-body">{children}</div>
+        {footer && <div className="modal-footer">{footer}</div>}
+      </div>
+    </div>
+  );
+}
+
+// History Side Sheet
+function HistoryModal({ open, onClose, historyItems }) {
+  if (!open) return null;
+  return (
+    <div className="modal-overlay">
+      <div className="history-sheet slide-in">
+        <div className="history-header">
+          <h2><History size={20}/> Forwarding History</h2>
+          <button onClick={onClose} className="btn-icon"><X size={20} /></button>
+        </div>
+        <div className="history-list">
+          {historyItems.length === 0 ? (
+            <div className="empty-state">No records found.</div>
+          ) : (
+            historyItems.map((item) => {
+              const email = item.forward_email || DEPARTMENT_EMAILS[item.forward_dept] || "N/A";
+              return (
+                <div key={item.id} className="history-item">
+                  <div className="h-item-header">
+                    <span className="h-dept-badge">{item.forward_dept} Div</span>
+                    <span className="h-time">
+                      {item.replied_at ? safeDateFromTimestamp(item.replied_at).toLocaleString() : 'Just now'}
+                    </span>
+                  </div>
+
+                  <div className="h-email-row">
+                    <Mail size={12}/> Sent to: <span>{email}</span>
+                  </div>
+
+                  <div className="h-note">
+                    <strong>Note:</strong> {item.admin_reply_text}
+                  </div>
+                  <div className="h-ref">Ref Ticket: @{item.user}</div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-/* -----------------------------
-  Dashboard Component
-------------------------------*/
+/* =========================================
+   DASHBOARD MAIN
+   ========================================= */
 function AdminDashboard({ onLogout }) {
   const [complaints, setComplaints] = useState([]);
-  const [replyInput, setReplyInput] = useState({});
-  const [replyType, setReplyType] = useState({}); // id => "quote"|"reply"
-  const [sending, setSending] = useState({}); // id => boolean (for send button)
   const [botLogs, setBotLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // UI state
-  const [activeTab, setActiveTab] = useState("All"); // All | Pending | Resolved
-  const [selectedIds, setSelectedIds] = useState(new Set());
-  const [selectAllChecked, setSelectAllChecked] = useState(false);
-  const [modalState, setModalState] = useState({ open: false, type: null, payload: null });
+  // Filters
+  const [activeTab, setActiveTab] = useState("Pending");
   const [searchQ, setSearchQ] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
-  const [stationFilter, setStationFilter] = useState("All"); // NEW: station filter
+  const [departmentFilter, setDepartmentFilter] = useState("All");
 
+  // Modals & Action State
+  const [composeModal, setComposeModal] = useState({ open: false, item: null });
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [messageText, setMessageText] = useState("");
+  const [selectedDept, setSelectedDept] = useState(DEPARTMENTS[0]);
+  const [isSending, setIsSending] = useState(false);
+
+  // NEW: Which action inside modal: 'reply' or 'forward'
+  const [actionType, setActionType] = useState("reply");
+
+  // Feedback
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
   const consoleEndRef = useRef(null);
 
-  // Live logs
+  // -- Listeners --
   useEffect(() => {
     const logDoc = doc(db, "logs", "bot");
     const unsub = onSnapshot(logDoc, (snap) => {
@@ -1012,313 +1037,158 @@ function AdminDashboard({ onLogout }) {
     return () => unsub();
   }, []);
 
+  useEffect(() => { consoleEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [botLogs]);
+
   useEffect(() => {
-    consoleEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [botLogs]);
-
-  // Helper: ensure complaint object's timestamp -> JS Date safely
-  const safeDateFromTimestamp = (ts) => {
-    if (!ts) return null;
-    // Firestore timestamp object has seconds + nanoseconds
-    if (typeof ts === "object" && ts.seconds) {
-      return new Date(ts.seconds * 1000);
-    }
-    // Could be ISO string or number
-    try {
-      return new Date(ts);
-    } catch {
-      return null;
-    }
-  };
-
-  // Live complaints listener with auto-detection of category/station/trainNumber
-  useEffect(() => {
-    const ref = collection(db, "complaints");
-    const q = query(ref, orderBy("timestamp", "desc"));
-
-    const unsub = onSnapshot(
-      q,
-      async (snap) => {
-        try {
-          const arr = [];
-          const updates = [];
-
-          for (const d of snap.docs) {
-            const data = d.data();
-            const text = data.text || "";
-
-            // detect category
-            const detectedCategory = autoDetectCategory(text);
-
-            // detect station & train numbers
-            const detectedStation = autoDetectStation(text) || data.station || null;
-            const trains = extractTrainNumbers(text);
-            const detectedTrainNumber = (trains.length > 0 ? trains[0] : data.trainNumber) || null;
-
-            // If any field missing or different, prepare update
-            const toUpdate = {};
-            if (detectedCategory && detectedCategory !== data.category) toUpdate.category = detectedCategory;
-            if (detectedStation && detectedStation !== data.station) toUpdate.station = detectedStation;
-            if (detectedTrainNumber && detectedTrainNumber !== data.trainNumber) toUpdate.trainNumber = detectedTrainNumber;
-
-            if (Object.keys(toUpdate).length > 0) {
-              updates.push(updateDoc(doc(db, "complaints", d.id), toUpdate));
-            }
-
-            arr.push({
-              id: d.id,
-              user: data.user || "unknown",
-              text,
-              category: detectedCategory,
-              confidence: data.confidence ?? 0,
-              status: data.status || "Pending",
-              replyType: data.replyType || "quote",
-              timestamp: data.timestamp || null,
-              station: detectedStation || "Unknown",
-              trainNumber: detectedTrainNumber || null
-            });
-          }
-
-          if (updates.length > 0) {
-            try {
-              await Promise.all(updates);
-            } catch (e) {
-              console.warn("Auto-field update errors:", e);
-            }
-          }
-
-          setComplaints(arr);
-          setLoading(false);
-        } catch (err) {
-          console.error("Listener error:", err);
-          setLoading(false);
-        }
-      },
-      (err) => {
-        console.error("Listener subscribe error:", err);
-        setLoading(false);
-      }
-    );
-
+    const q = query(collection(db, "complaints"), orderBy("timestamp", "desc"));
+    const unsub = onSnapshot(q, (snap) => {
+      const arr = snap.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          category: autoDetectCategory(data.text) || data.category,
+          station: autoDetectStation(data.text) || data.station || "Unknown",
+          trainNumber: extractTrainNumbers(data.text)[0] || data.trainNumber || null,
+        };
+      });
+      setComplaints(arr);
+      setLoading(false);
+    });
     return () => unsub();
   }, []);
 
-  // Manual refresh - also performs detection & updates
-  const handleManualRefresh = async () => {
-    setLoading(true);
-    try {
-      const q = query(collection(db, "complaints"), orderBy("timestamp", "desc"));
-      const snap = await getDocs(q);
-      const arr = [];
-      const updates = [];
+  // -- Handlers --
 
-      for (const d of snap.docs) {
-        const data = d.data();
-        const text = data.text || "";
-
-        const detectedCategory = autoDetectCategory(text);
-        const detectedStation = autoDetectStation(text) || data.station || null;
-        const trains = extractTrainNumbers(text);
-        const detectedTrainNumber = (trains.length > 0 ? trains[0] : data.trainNumber) || null;
-
-        const toUpdate = {};
-        if (detectedCategory && detectedCategory !== data.category) toUpdate.category = detectedCategory;
-        if (detectedStation && detectedStation !== data.station) toUpdate.station = detectedStation;
-        if (detectedTrainNumber && detectedTrainNumber !== data.trainNumber) toUpdate.trainNumber = detectedTrainNumber;
-
-        if (Object.keys(toUpdate).length > 0) {
-          updates.push(updateDoc(doc(db, "complaints", d.id), toUpdate));
-        }
-
-        arr.push({
-          id: d.id,
-          user: data.user || "unknown",
-          text,
-          category: detectedCategory,
-          confidence: data.confidence ?? 0,
-          status: data.status || "Pending",
-          replyType: data.replyType || "quote",
-          timestamp: data.timestamp || null,
-          station: detectedStation || "Unknown",
-          trainNumber: detectedTrainNumber || null
-        });
-      }
-
-      if (updates.length > 0) {
-        try {
-          await Promise.all(updates);
-        } catch (e) {
-          console.warn("Manual auto-field update errors:", e);
-        }
-      }
-
-      setComplaints(arr);
-    } catch (err) {
-      console.error("Refresh failed:", err);
-      alert("Refresh failed. Check console.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /* Filter Logic */
-  const filterByTab = (c) => {
-    if (activeTab === "All") return true;
-    if (activeTab === "Pending") return c.status === "Pending" || c.status === "needs_reply";
-    if (activeTab === "Resolved") return c.status === "Replied";
-    return true;
-  };
-
-  const filterByCategory = (c) => {
-    if (categoryFilter === "All") return true;
-    return c.category === categoryFilter;
-  };
-
-  const filterByStation = (c) => {
-    if (stationFilter === "All") return true;
-    return (c.station || "Unknown") === stationFilter;
-  };
-
-  const filterBySearch = (c) => {
-    if (!searchQ) return true;
-    const q = searchQ.toLowerCase();
-    return (
-      (c.text || "").toLowerCase().includes(q) ||
-      (c.user || "").toLowerCase().includes(q) ||
-      (c.category || "").toLowerCase().includes(q) ||
-      ((c.station || "") + "").toLowerCase().includes(q) ||
-      ((c.trainNumber || "") + "").toLowerCase().includes(q)
-    );
-  };
-
-  const filteredComplaints = complaints.filter(
-    (c) => filterByTab(c) && filterByCategory(c) && filterByStation(c) && filterBySearch(c)
-  );
-
-  /* Bulk Logic */
-  const toggleSelect = (id) => {
-    setSelectedIds((prev) => {
-      const clone = new Set(prev);
-      if (clone.has(id)) clone.delete(id);
-      else clone.add(id);
-      setSelectAllChecked(false);
-      return clone;
-    });
-  };
-
-  const toggleSelectAll = () => {
-    if (selectAllChecked) {
-      setSelectedIds(new Set());
-      setSelectAllChecked(false);
+  const handleOpenCompose = (item) => {
+    setComposeModal({ open: true, item });
+    setMessageText("");
+    setActionType("reply"); // default to reply
+    if (item.station && DEPARTMENT_EMAILS[item.station]) {
+      setSelectedDept(item.station);
     } else {
-      const ids = new Set(filteredComplaints.map((c) => c.id));
-      setSelectedIds(ids);
-      setSelectAllChecked(true);
+      setSelectedDept("Mangalore"); // Default
     }
   };
 
-  const openModal = ({ type, payload = null }) => {
-    setModalState({ open: true, type, payload });
+  const handleCloseCompose = () => {
+    setComposeModal({ open: false, item: null });
+    setIsSending(false);
+    setActionType("reply");
   };
 
-  const closeModal = () => setModalState({ open: false, type: null, payload: null });
+  // Combined handler for Reply vs Forward (Confirm button)
+  const handleSendAction = async () => {
+    if (!messageText.trim()) return alert("Please enter a message or instruction.");
 
-  /* Actions */
-  const confirmDeleteSingle = (id) => openModal({ type: "delete_single", payload: { id } });
+    setIsSending(true);
+    const { id } = composeModal.item;
 
-  const performDeleteSingle = async (id) => {
+    try {
+      if (actionType === "reply") {
+        // Normal admin reply — mark as Replied
+        await updateDoc(doc(db, "complaints", id), {
+          status: "Replied",
+          admin_reply_text: messageText,
+          replyType: "reply",
+          replied_at: serverTimestamp()
+        });
+
+        setToast({
+          show: true,
+          message: "Reply sent to passenger",
+          type: "success"
+        });
+
+        handleCloseCompose();
+      } else if (actionType === "forward") {
+        // Update Firestore first
+        const targetEmail = DEPARTMENT_EMAILS[selectedDept];
+
+        await updateDoc(doc(db, "complaints", id), {
+          status: "Forwarded",
+          admin_reply_text: messageText,
+          forward_dept: selectedDept,
+          forward_email: targetEmail,
+          replyType: "forward",
+          replied_at: serverTimestamp()
+        });
+
+        // Then call backend to send email via Flask /api/send-email
+        // Normalize station string for backend (lowercase)
+        const stationKey = selectedDept.toLowerCase();
+
+        try {
+          const resp = await fetch("http://localhost:5000/api/send-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              station: stationKey,
+              message: messageText,
+              ticketId: id,
+              ticketRefUser: composeModal.item?.user || null
+            })
+          });
+
+          const payload = await resp.json();
+
+          if (resp.ok && payload.success) {
+            setToast({ show: true, message: `Email sent to ${targetEmail}`, type: "success" });
+          } else {
+            // Backend returned failure — show it but ticket remains forwarded in Firestore
+            const errMsg = payload?.error || payload?.message || "Email failed";
+            setToast({ show: true, message: `Forwarded but email failed: ${errMsg}`, type: "error" });
+          }
+        } catch (err) {
+          setToast({ show: true, message: `Forward saved but server error: ${err.message}`, type: "error" });
+        }
+
+        handleCloseCompose();
+      }
+    } catch (err) {
+      console.error(err);
+      setToast({ show: true, message: "Failed to process action.", type: "error" });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if(!window.confirm("Permanently delete this ticket?")) return;
     try {
       await deleteDoc(doc(db, "complaints", id));
-      setComplaints((prev) => prev.filter((c) => c.id !== id));
-      setSelectedIds((prev) => {
-        const clone = new Set(prev);
-        clone.delete(id);
-        return clone;
-      });
-    } catch (err) {
-      console.error("Delete failed:", err);
-      alert("Failed to delete item.");
-    } finally {
-      closeModal();
+      setToast({ show: true, message: "Ticket deleted", type: "success" });
+    } catch(e) {
+      console.error(e);
+      setToast({ show: true, message: "Delete failed", type: "error" });
     }
   };
 
-  const confirmDeleteSelected = () => openModal({ type: "delete_bulk", payload: { ids: Array.from(selectedIds) } });
+  // -- Filtering Logic --
+  const filteredComplaints = complaints.filter(c => {
+    const matchesSearch = !searchQ ||
+      c.text?.toLowerCase().includes(searchQ.toLowerCase()) ||
+      c.user?.toLowerCase().includes(searchQ.toLowerCase());
 
-  const performDeleteBulk = async (ids = []) => {
-    if (ids.length === 0) { closeModal(); return; }
-    try {
-      await Promise.all(ids.map((id) => deleteDoc(doc(db, "complaints", id))));
-      setComplaints((prev) => prev.filter((c) => !ids.includes(c.id)));
-      setSelectedIds(new Set());
-      setSelectAllChecked(false);
-    } catch (err) {
-      console.error("Bulk delete failed:", err);
-      alert("Bulk delete failed.");
-    } finally {
-      closeModal();
+    const matchesCat = categoryFilter === "All" || c.category === categoryFilter;
+
+    const matchesDept = departmentFilter === "All" || (c.station || "Unknown") === departmentFilter;
+
+    if (activeTab === "Pending") {
+      return (c.status === "Pending" || c.status === "needs_reply" || c.status === "Unclassified") && matchesSearch && matchesCat && matchesDept;
     }
-  };
-
-  const confirmResolveSelected = () => openModal({ type: "resolve_bulk", payload: { ids: Array.from(selectedIds) } });
-
-  const performResolveBulk = async (ids = []) => {
-    if (ids.length === 0) { closeModal(); return; }
-    try {
-      await Promise.all(
-        ids.map((id) =>
-          updateDoc(doc(db, "complaints", id), {
-            status: "Replied",
-            replyType: "bulk",
-            admin_reply_text: "Marked resolved by admin (bulk)",
-            resolvedAt: serverTimestamp()
-          })
-        )
-      );
-      setComplaints((prev) =>
-        prev.map((c) => (ids.includes(c.id) ? { ...c, status: "Replied", replyType: "bulk" } : c))
-      );
-      setSelectedIds(new Set());
-      setSelectAllChecked(false);
-    } catch (err) {
-      console.error("Bulk resolve failed:", err);
-      alert("Bulk resolve failed.");
-    } finally {
-      closeModal();
+    if (activeTab === "Already Replied") {
+      return (c.status === "Replied") && matchesSearch && matchesCat && matchesDept;
     }
-  };
+    return matchesSearch && matchesCat && matchesDept;
+  });
 
-  const handleSend = async (id) => {
-    const type = replyType[id] || "quote";
-    const text = (replyInput[id] || "").trim();
-    if (!text) return alert("Enter a reply message.");
+  const historyList = complaints.filter(c => c.status === "Forwarded" || c.status === "Replied");
 
-    setSending((s) => ({ ...s, [id]: true }));
-    try {
-      await updateDoc(doc(db, "complaints", id), {
-        status: "needs_reply",
-        admin_reply_text: text,
-        replyType: type
-      });
-      setComplaints((prev) => prev.map((c) => (c.id === id ? { ...c, status: "needs_reply", replyType: type } : c)));
-      setReplyInput((p) => ({ ...p, [id]: "" }));
-    } catch (err) {
-      console.error("Send failed:", err);
-      alert("Failed to send reply.");
-    } finally {
-      setSending((s) => ({ ...s, [id]: false }));
-    }
-  };
-
-  const handleLogout = () => {
-    // FIX: Clear LocalStorage on logout
-    localStorage.removeItem("railway_admin_session");
-    onLogout(false);
-  };
-
+  // Stats Calculation
   const totalCount = complaints.length;
-  const pendingCount = complaints.filter((c) => c.status === "Pending" || c.status === "needs_reply").length;
-  const resolvedCount = complaints.filter((c) => c.status === "Replied").length;
+  const pendingCount = complaints.filter(c => c.status === "Pending" || c.status === "needs_reply" || c.status === "Unclassified").length;
+  const resolvedCount = complaints.filter(c => c.status === "Replied" || c.status === "Forwarded").length;
 
   return (
     <div className="app-root">
@@ -1328,268 +1198,311 @@ function AdminDashboard({ onLogout }) {
           <div className="brand-logo">🚆</div>
           <div>
             <h1>RailSeva Pro</h1>
-            <span className="badge-pro">ADMIN DASHBOARD</span>
+            <span className="badge-pro">ADMIN</span>
           </div>
         </div>
 
-        <div className="nav-actions" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ position: "relative" }}>
-              <input
-                placeholder="Search by text, user, category, station or train no..."
+        <div className="nav-actions">
+           <select
+             className="nav-select"
+             onChange={(e) => setCategoryFilter(e.target.value)}
+             value={categoryFilter}
+           >
+              <option value="All">All Categories</option>
+              {Object.keys(CATEGORY_MAP).map(cat => <option key={cat} value={cat}>{cat}</option>)}
+           </select>
+
+           <select
+             className="nav-select"
+             onChange={(e) => setDepartmentFilter(e.target.value)}
+             value={departmentFilter}
+           >
+              <option value="All">All Departments</option>
+              {DEPARTMENTS.map(dept => <option key={dept} value={dept}>{dept}</option>)}
+           </select>
+
+           <div className="search-bar">
+             <Search size={16} className="search-icon"/>
+             <input
+                placeholder="Search..."
                 value={searchQ}
-                onChange={(e) => setSearchQ(e.target.value)}
-                style={{
-                  padding: "8px 36px 8px 12px",
-                  borderRadius: 8,
-                  border: "1px solid var(--border)",
-                  outline: "none",
-                  width: 360,
-                  background: "#fff"
-                }}
-              />
-              <Search style={{ position: "absolute", right: 10, top: 8, color: "#94a3b8" }} />
-            </div>
+                onChange={e => setSearchQ(e.target.value)}
+             />
+           </div>
 
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              style={{
-                borderRadius: 8,
-                padding: "8px 10px",
-                border: "1px solid var(--border)",
-                background: "white"
-              }}
-            >
-              <option value="All">All categories</option>
-              {Object.keys(CATEGORY_MAP).map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
+           <button className="btn outline" onClick={() => setHistoryOpen(true)} title="History">
+             <History size={16} />
+           </button>
 
-            <select
-              value={stationFilter}
-              onChange={(e) => setStationFilter(e.target.value)}
-              style={{
-                borderRadius: 8,
-                padding: "8px 10px",
-                border: "1px solid var(--border)",
-                background: "white"
-              }}
-            >
-              {STATIONS.map((st) => (
-                <option key={st} value={st}>
-                  {st}
-                </option>
-              ))}
-            </select>
-
-            <button className="btn ghost" onClick={handleManualRefresh}>
-              <RefreshCw size={16} /> Sync
-            </button>
-
-            <button className="btn ghost" onClick={handleLogout} style={{ color: '#ef4444', borderColor: '#ef4444' }}>
-              <LogOut size={16} /> Logout
-            </button>
-          </div>
+           <button className="btn outline logout" onClick={() => onLogout(false)} title="Logout">
+             <LogOut size={16} />
+           </button>
         </div>
       </nav>
 
       <div className="dashboard-grid">
         <main className="main-content">
-          {/* STATS */}
-          <div className="stats-row">
-            <div className="stat-card" style={{ cursor: "pointer" }} onClick={() => setActiveTab("All")}>
-              <div className="stat-icon bg-blue"><MessageSquare size={20} /></div>
-              <div><div className="stat-label">Total Tickets</div><div className="stat-value">{totalCount}</div></div>
-            </div>
-            <div className="stat-card" style={{ cursor: "pointer" }} onClick={() => setActiveTab("Pending")}>
-              <div className="stat-icon bg-amber"><AlertCircle size={20} /></div>
-              <div><div className="stat-label">Pending</div><div className="stat-value warning">{pendingCount}</div></div>
-            </div>
-            <div className="stat-card" style={{ cursor: "pointer" }} onClick={() => setActiveTab("Resolved")}>
-              <div className="stat-icon bg-green"><CheckCircle size={20} /></div>
-              <div><div className="stat-label">Resolved</div><div className="stat-value success">{resolvedCount}</div></div>
-            </div>
-          </div>
 
-          {/* TABLE */}
-          <div className="table-container">
-            <div className="section-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <h2><LayoutDashboard size={18} /> Priority Queue</h2>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <button className={`btn ${activeTab === "All" ? "" : "ghost"}`} onClick={() => setActiveTab("All")}>All</button>
-                <button className={`btn ${activeTab === "Pending" ? "" : "ghost"}`} onClick={() => setActiveTab("Pending")}>Pending</button>
-                <button className={`btn ${activeTab === "Resolved" ? "" : "ghost"}`} onClick={() => setActiveTab("Resolved")}>Resolved</button>
+          {/* STATS CARDS */}
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-icon-wrapper bg-blue-light text-blue">
+                <MessageSquare size={24} />
+              </div>
+              <div className="stat-details">
+                <span className="stat-label">Total Tickets</span>
+                <span className="stat-value">{totalCount}</span>
               </div>
             </div>
 
-            {loading ? (
-              <div style={{ padding: 20 }}>Fetching data...</div>
-            ) : complaints.length === 0 ? (
-              <div style={{ padding: 20 }}>No complaints found.</div>
-            ) : (
-              <div className="table-responsive" style={{ position: "relative" }}>
+            <div className="stat-card">
+              <div className="stat-icon-wrapper bg-orange-light text-orange">
+                <Clock size={24} />
+              </div>
+              <div className="stat-details">
+                <span className="stat-label">Pending</span>
+                <span className="stat-value">{pendingCount}</span>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon-wrapper bg-green-light text-green">
+                <CheckCircle size={24} />
+              </div>
+              <div className="stat-details">
+                <span className="stat-label">Resolved</span>
+                <span className="stat-value">{resolvedCount}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* PRIORITY QUEUE HEADER + FILTERS */}
+          <div className="section-header-row">
+            <div className="section-title">
+              <LayoutDashboard size={20} />
+              <h2>Priority Queue</h2>
+            </div>
+
+            <div className="tabs-pill">
+               <button
+                 className={`pill-tab ${activeTab === 'All' ? 'active' : ''}`}
+                 onClick={() => setActiveTab('All')}
+               >
+                 All
+               </button>
+               <button
+                 className={`pill-tab ${activeTab === 'Pending' ? 'active' : ''}`}
+                 onClick={() => setActiveTab('Pending')}
+               >
+                 Pending
+               </button>
+               <button
+                 className={`pill-tab ${activeTab === 'Already Replied' ? 'active' : ''}`}
+                 onClick={() => setActiveTab('Already Replied')}
+               >
+                 Already Replied
+               </button>
+            </div>
+          </div>
+
+          {/* DATA TABLE */}
+          <div className="table-card">
+            {loading ? <div className="p-4">Loading...</div> : (
+              <div className="table-scroll-container">
                 <table className="modern-table">
                   <thead>
                     <tr>
-                     
-                      <th width="140">Category</th>
-                      <th>Passenger Issue</th>
-                      <th width="120">Station</th>
-                      <th width="110">Train No</th>
-                      <th width="140">Status</th>
-                      <th width="360">Action</th>
+                      <th width="130">Category</th>
+                      <th>Issue Details</th>
+                      <th width="120">Location</th>
+                      <th width="120">Status</th>
+                      <th width="140" align="right">Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredComplaints.map((c) => {
-                      const isSelected = selectedIds.has(c.id);
-                      const isSending = !!sending[c.id];
-                      return (
-                        <tr key={c.id} className={isSelected ? "selected-row" : ""}>
-                          {/* <td><input type="checkbox" checked={isSelected} onChange={() => toggleSelect(c.id)} /></td> */}
+                    {filteredComplaints.length === 0 ? (
+                      <tr><td colSpan="5" style={{textAlign:"center", padding: 40}}>No records found.</td></tr>
+                    ) : (
+                      filteredComplaints.map(c => (
+                        <tr key={c.id}>
                           <td>
                             <div className={`chip ${sanitizeClass(c.category)}`}>
                               {getIcon(c.category)} {c.category}
                             </div>
                           </td>
                           <td>
-                            <div className="tweet-content">
-                              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                  <span className="user-handle">@{c.user}</span>
-                                  <div style={{ fontSize: 12, color: "#94a3b8" }}>
-                                    {c.timestamp ? safeDateFromTimestamp(c.timestamp).toLocaleString() : ""}
-                                  </div>
-                                </div>
-                              </div>
-                              <p>{c.text}</p>
-                              <div className="meta-info">
-                                Confidence: {(c.confidence * 100).toFixed(0)}%
-                                {c.station ? ` • Station: ${c.station}` : ""}
-                                {c.trainNumber ? ` • Train: ${c.trainNumber}` : ""}
-                              </div>
-                            </div>
+                             <div className="ticket-info">
+                               <div className="ticket-header">
+                                 <span className="u-handle">@{c.user}</span>
+                                 <span className="u-time">{c.timestamp ? safeDateFromTimestamp(c.timestamp).toLocaleString() : ''}</span>
+                               </div>
+                               <p className="ticket-text">{c.text}</p>
+                               <div className="ticket-meta">
+                                 Confidence: {(c.confidence * 100).toFixed(0)}%
+                                 {c.trainNumber && ` • Train: ${c.trainNumber}`}
+                               </div>
+                             </div>
                           </td>
-                          <td style={{ textAlign: "center" }}>{c.station || "Unknown"}</td>
-                          <td style={{ textAlign: "center" }}>{c.trainNumber || "-"}</td>
                           <td>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <span className={`status-dot ${c.status === "Replied" ? "s-green" : c.status === "needs_reply" ? "s-amber" : "s-blue"}`}>
-                                ● {c.status}
-                              </span>
-                              {isSending && <div className="tiny-spinner" title="Sending..." />}
+                            <div className="location-cell">
+                              <strong>{c.station}</strong>
+                              <small>{c.trainNumber || "N/A"}</small>
                             </div>
                           </td>
                           <td>
-                            {c.status === "Replied" ? (
-                              <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "flex-end" }}>
-                                <div className="replied-badge" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                                  <CheckCircle size={14} /> Replied via {c.replyType}
-                                </div>
-                                <button className="btn ghost" onClick={() => confirmDeleteSingle(c.id)} title="Delete"><Trash2 size={14} /> Delete</button>
-                              </div>
-                            ) : (
-                              <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "flex-end" }}>
-                                <input
-                                  value={replyInput[c.id] || ""}
-                                  onChange={(e) => setReplyInput((p) => ({ ...p, [c.id]: e.target.value }))}
-                                  placeholder="Write response..."
-                                  style={{ flex: 1, borderRadius: 8, padding: "8px 12px", border: "1px solid var(--border)" }}
-                                />
-                                <select
-                                  value={replyType[c.id] || "quote"}
-                                  onChange={(e) => setReplyType((p) => ({ ...p, [c.id]: e.target.value }))}
-                                  style={{ borderRadius: 8, padding: "8px 10px", border: "1px solid var(--border)", background: "white" }}
-                                >
-                                  <option value="quote">Quote</option>
-                                  <option value="reply">Reply</option>
-                                </select>
-                                <button
-                                  className="btn"
-                                  onClick={() => handleSend(c.id)}
-                                  disabled={sending[c.id]}
-                                  style={{ background: "var(--primary)", color: "white", borderRadius: 8, padding: "8px 12px", display: "inline-flex", gap: 8, alignItems: "center" }}
-                                >
-                                  {sending[c.id] ? <><span className="btn-spinner" /> Sending</> : <><Send size={14} /> Send</>}
-                                </button>
-                                <button className="btn ghost" onClick={() => confirmDeleteSingle(c.id)} title="Delete"><Trash2 size={14} /></button>
-                              </div>
-                            )}
+                            <span className={`status-badge ${c.status === 'Pending' ? 'warn' : 'good'}`}>
+                               {c.status}
+                               {c.status === 'Forwarded' && <small>to {c.forward_dept}</small>}
+                            </span>
+                          </td>
+                          <td align="right">
+                             <div className="action-cell">
+                               {c.status === 'Pending' || c.status === 'needs_reply' || c.status === 'Unclassified' ? (
+                                 <button className="btn primary small" onClick={() => handleOpenCompose(c)}>
+                                   <Share2 size={14}/> Take Action
+                                 </button>
+                               ) : (
+                                 <div className="replied-check">
+                                   <Check size={16}/> Done
+                                 </div>
+                               )}
+                               <button className="btn icon-only" onClick={() => handleDelete(c.id)} title="Delete">
+                                 <Trash2 size={14}/>
+                               </button>
+                             </div>
                           </td>
                         </tr>
-                      );
-                    })}
+                      ))
+                    )}
                   </tbody>
                 </table>
-                {selectedIds.size > 0 && (
-                  <div className="bulk-action-bar">
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{ fontWeight: 700 }}>{selectedIds.size} selected</div>
-                      <button className="btn ghost" onClick={() => setSelectedIds(new Set())}><X size={14} /> Clear</button>
-                    </div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button className="btn" onClick={confirmResolveSelected} style={{ background: "var(--primary)", color: "white" }}><Check size={14} /> Mark Selected Resolved</button>
-                      <button className="btn" onClick={confirmDeleteSelected} style={{ background: "#ef4444", color: "white" }}><Trash2 size={14} /> Delete Selected</button>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>
         </main>
 
-        {/* RIGHT LOG CONSOLE */}
-        <aside className="sidebar-console">
-          <div className="console-card">
-            <div className="console-header">
-              <Terminal size={16} /><span>System Logs</span><div className="console-status online"></div>
+        {/* LOGS SIDEBAR */}
+        <aside className="sidebar">
+          <div className="console-wrapper">
+            <div className="console-head">
+              <Terminal size={14}/> System Logs
             </div>
-            <div className="console-body">
-              {botLogs.slice(-100).map((log, i) => (
-                <div key={i} className="log-line"><span className="log-arrow">➜</span> {log}</div>
+            <div className="console-logs">
+              {botLogs.slice(-50).map((l, i) => (
+                <div key={i} className="log-row"><span>{`>`}</span> {l}</div>
               ))}
-              <div ref={consoleEndRef} />
+              <div ref={consoleEndRef}/>
             </div>
           </div>
         </aside>
       </div>
 
-      <ConfirmModal
-        open={modalState.open}
-        title={modalState.type === "delete_single" ? "Delete complaint" : modalState.type === "delete_bulk" ? `Delete ${modalState.payload?.ids?.length || 0} complaint(s)` : modalState.type === "resolve_bulk" ? `Mark ${modalState.payload?.ids?.length || 0} complaint(s) as resolved` : "Confirm action"}
-        message={modalState.type === "delete_single" ? "This will permanently delete the complaint. This action cannot be undone." : modalState.type === "delete_bulk" ? `Are you sure you want to permanently delete ${modalState.payload?.ids?.length || 0} selected complaint(s)?` : modalState.type === "resolve_bulk" ? `Mark ${modalState.payload?.ids?.length || 0} selected complaint(s) as resolved.` : ""}
-        confirmLabel={modalState.type === "delete_single" || modalState.type === "delete_bulk" ? "Delete" : "Confirm"}
-        danger={modalState.type === "delete_single" || modalState.type === "delete_bulk"}
-        onCancel={closeModal}
-        onConfirm={() => {
-          if (modalState.type === "delete_single") performDeleteSingle(modalState.payload.id);
-          else if (modalState.type === "delete_bulk") performDeleteBulk(modalState.payload.ids);
-          else if (modalState.type === "resolve_bulk") performResolveBulk(modalState.payload.ids);
-          else closeModal();
-        }}
+      {/* --- MODALS --- */}
+
+      {/* COMPOSE MODAL */}
+      <Modal
+        open={composeModal.open}
+        onClose={handleCloseCompose}
+        title="Take Action"
+        footer={
+          <div className="compose-footer dual-buttons" style={{display: "flex", gap: "8px", alignItems: "center"}}>
+             <button
+               className={`btn ${actionType === "reply" ? "primary" : "ghost"}`}
+               onClick={() => setActionType("reply")}
+               type="button"
+             >
+               Reply Ticket
+             </button>
+
+             <button
+               className={`btn ${actionType === "forward" ? "primary" : "ghost"}`}
+               onClick={() => setActionType("forward")}
+               type="button"
+             >
+               Send Email to Department
+             </button>
+
+             <div style={{flex: 1}}></div>
+
+             <button className="btn ghost" onClick={handleCloseCompose} type="button">Cancel</button>
+
+             <button
+               className="btn success"
+               onClick={handleSendAction}
+               disabled={isSending}
+               type="button"
+             >
+               {isSending ? "Processing..." : "Confirm"} <Send size={16} />
+             </button>
+          </div>
+        }
+      >
+        <div className="compose-form">
+           <label>Passenger Complaint</label>
+           <div className="quote-box">
+             "{composeModal.item?.text}"
+           </div>
+
+           <label>Action</label>
+           <div style={{display:"flex", gap:8, marginBottom:12}}>
+             <div className={`action-pill ${actionType === "reply" ? "active" : ""}`} onClick={() => setActionType("reply")}>
+               <strong>Reply</strong>
+               <div className="muted">Send a reply to passenger & mark as Replied</div>
+             </div>
+
+             <div className={`action-pill ${actionType === "forward" ? "active" : ""}`} onClick={() => setActionType("forward")}>
+               <strong>Email Dept</strong>
+               <div className="muted">Forward to department & send email</div>
+             </div>
+           </div>
+
+           <label>Select Department (Recipient)</label>
+           <div className="select-wrapper">
+             <Building2 size={16} className="sel-icon"/>
+             <select
+               value={selectedDept}
+               onChange={(e) => setSelectedDept(e.target.value)}
+             >
+               {DEPARTMENTS.map(d => (
+                 <option key={d} value={d}>
+                   {d} Division ({DEPARTMENT_EMAILS[d]})
+                 </option>
+               ))}
+             </select>
+           </div>
+
+           <label>Action Note / Message</label>
+           <textarea
+             className="form-textarea"
+             rows="4"
+             placeholder="Enter a message to reply / forward"
+             value={messageText}
+             onChange={(e) => setMessageText(e.target.value)}
+           />
+        </div>
+      </Modal>
+
+      {/* HISTORY SHEET */}
+      <HistoryModal
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        historyItems={historyList}
       />
+
+      {/* TOAST */}
+      <Toast
+        show={toast.show}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ ...toast, show: false })}
+      />
+
     </div>
   );
 }
 
-/* =========================================
-   MAIN APP ORCHESTRATOR
-   ========================================= */
 export default function App() {
-  // FIX: Initialize state from LocalStorage so refresh doesn't log out
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem("railway_admin_session") === "true";
-  });
-
-  // If not logged in, show Login Page
-  if (!isAuthenticated) {
-    return <LoginPage onLogin={setIsAuthenticated} />;
-  }
-
-  // If logged in, show Dashboard
+  const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem("railway_admin_session") === "true");
+  if (!isAuthenticated) return <LoginPage onLogin={setIsAuthenticated} />;
   return <AdminDashboard onLogout={setIsAuthenticated} />;
-} 
+}
