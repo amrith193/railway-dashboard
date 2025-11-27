@@ -35,7 +35,8 @@ import {
   Building2,
   Mail,
   MessageSquare,
-  Repeat
+  Repeat,
+  Pencil // <--- Added Pencil Icon
 } from "lucide-react";
 
 import "./App.css";
@@ -342,9 +343,18 @@ function AdminDashboard({ onLogout }) {
 
   const handleOpenCompose = (item) => {
     setComposeModal({ open: true, item });
-    setMessageText("");
-    setActionType("reply"); 
-    if (item.station && DEPARTMENT_EMAILS[item.station]) {
+    
+    // --- PRE-FILLING LOGIC ---
+    // 1. Text: Use existing reply text if available (for editing), else empty.
+    setMessageText(item.admin_reply_text || "");
+
+    // 2. Action Type: Restore previous type if exists, else default to 'reply'.
+    setActionType(item.replyType || "reply");
+
+    // 3. Department: Restore previous department, else try to auto-detect, else default.
+    if (item.forward_dept) {
+      setSelectedDept(item.forward_dept);
+    } else if (item.station && DEPARTMENT_EMAILS[item.station]) {
       setSelectedDept(item.station);
     } else {
       setSelectedDept("Mangalore");
@@ -354,7 +364,8 @@ function AdminDashboard({ onLogout }) {
   const handleCloseCompose = () => {
     setComposeModal({ open: false, item: null });
     setIsSending(false);
-    setActionType("reply");
+    // Note: We don't reset text/dept here immediately so animation looks clean, 
+    // but handleOpenCompose overwrites them anyway.
   };
 
   const handleSendAction = async () => {
@@ -367,6 +378,7 @@ function AdminDashboard({ onLogout }) {
       if (actionType === "reply") {
         // --- REPLY LOGIC ---
         // Status: "needs_reply" -> Bot tweets
+        // If editing a "Done" ticket, this re-queues it.
         await updateDoc(doc(db, "complaints", id), {
           status: "needs_reply",
           admin_reply_text: messageText,
@@ -524,9 +536,9 @@ function AdminDashboard({ onLogout }) {
            <div className="search-bar">
              <Search size={16} className="search-icon"/>
              <input
-                placeholder="Search..."
-                value={searchQ}
-                onChange={e => setSearchQ(e.target.value)}
+               placeholder="Search..."
+               value={searchQ}
+               onChange={e => setSearchQ(e.target.value)}
              />
            </div>
 
@@ -666,6 +678,17 @@ function AdminDashboard({ onLogout }) {
                                    <Check size={16}/> Done
                                  </div>
                                )}
+                               
+                               {/* EDIT BUTTON (PENCIL) */}
+                               <button 
+                                 className="btn icon-only" 
+                                 onClick={() => handleOpenCompose(c)} 
+                                 title="Edit / Retry"
+                               >
+                                 <Pencil size={14}/>
+                               </button>
+
+                               {/* DELETE BUTTON */}
                                <button className="btn icon-only" onClick={() => handleDelete(c.id)} title="Delete">
                                  <Trash2 size={14}/>
                                </button>
@@ -703,7 +726,7 @@ function AdminDashboard({ onLogout }) {
       <Modal
         open={composeModal.open}
         onClose={handleCloseCompose}
-        title="Take Action"
+        title={composeModal.item?.status === 'Replied' || composeModal.item?.status === 'Forwarded' ? "Edit / Retry Action" : "Take Action"}
         footer={
           <div className="compose-footer dual-buttons" style={{display: "flex", gap: "8px", alignItems: "center"}}>
              <button
