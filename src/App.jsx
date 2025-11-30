@@ -1,3 +1,6 @@
+
+
+
 // src/App.jsx
 import React, { useEffect, useState, useRef } from "react";
 import { db } from "./firebase";
@@ -36,10 +39,11 @@ import {
   Mail,
   MessageSquare,
   Repeat,
-  Pencil // <--- Added Pencil Icon
+  Pencil
 } from "lucide-react";
 
 import "./App.css";
+import "./Login.css";
 
 /* =========================================
    CONSTANTS & CONFIG
@@ -71,7 +75,7 @@ const STATION_MAP = {
 };
 
 /* =========================================
-   HELPER FUNCTIONS
+   HELPERS
    ========================================= */
 
 const autoDetectCategory = (text) => {
@@ -87,17 +91,46 @@ const autoDetectStation = (text) => {
   if (!text) return null;
   const lower = text.toLowerCase();
   for (const [station, keywords] of Object.entries(STATION_MAP)) {
-    for (const k of keywords) {
-      if (lower.includes(k)) return station;
-    }
+    if (keywords.some((k) => lower.includes(k))) return station;
   }
   return null;
 };
 
+// Extract train numbers (4-6 digits)
 const extractTrainNumbers = (text) => {
   if (!text) return [];
   const matches = text.match(/\b\d{4,6}\b/g);
   return matches ? Array.from(new Set(matches)) : [];
+};
+
+// New PNR extractor: prefer exact 10-digit, else take last 10 digits from large groups (11-13)
+const extractPNR = (text = "", trainNumber = null) => {
+  if (!text) return null;
+
+  // 1) exact 10-digit matches
+  const exact10 = text.match(/\b\d{10}\b/g);
+  if (exact10 && exact10.length > 0) {
+    // prefer PNR not equal to trainNumber
+    const found = exact10.find(p => String(p) !== String(trainNumber));
+    return found || exact10[0];
+  }
+
+  // 2) find large numeric groups (11-13 digits) and take last 10 digits
+  const large = text.match(/\b\d{11,13}\b/g);
+  if (large && large.length > 0) {
+    const converted = large.map(n => n.slice(-10));
+    const found = converted.find(p => String(p) !== String(trainNumber));
+    return found || converted[0];
+  }
+
+  // 3) fallback: 6-digit numbers (sometimes PNRs stored as 6 digits) - rare; avoid conflicting with train numbers
+  const sixDigit = text.match(/\b\d{6}\b/g);
+  if (sixDigit && sixDigit.length > 0) {
+    const found = sixDigit.find(p => String(p) !== String(trainNumber));
+    return found || sixDigit[0];
+  }
+
+  return null;
 };
 
 const sanitizeClass = (str) => (str || "").replace(/\s/g, "").toLowerCase();
@@ -118,6 +151,13 @@ const safeDateFromTimestamp = (ts) => {
   if (!ts) return null;
   if (typeof ts === "object" && ts.seconds) return new Date(ts.seconds * 1000);
   try { return new Date(ts); } catch { return null; }
+};
+
+
+const getDisplayName = (record) => {
+  if (record?.user) return `@${record.user}`;
+  const name = record?.name?.trim();
+  return name && name.length > 0 ? name : "User";
 };
 
 /* =========================================
@@ -199,7 +239,7 @@ const LoginPage = ({ onLogin }) => {
 };
 
 /* =========================================
-   UI COMPONENTS
+   UI COMPONENTS (Modal, Toast, History)
    ========================================= */
 
 const Toast = ({ show, message, type = "success", onClose }) => {
@@ -284,7 +324,9 @@ function HistoryModal({ open, onClose, historyItems }) {
 /* =========================================
    DASHBOARD MAIN
    ========================================= */
+
 function AdminDashboard({ onLogout }) {
+  // data & UI state
   const [complaints, setComplaints] = useState([]);
   const [botLogs, setBotLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -294,6 +336,8 @@ function AdminDashboard({ onLogout }) {
   const [searchQ, setSearchQ] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [departmentFilter, setDepartmentFilter] = useState("All");
+  const [trainFilter, setTrainFilter] = useState("All");
+  const [sourceFilter, setSourceFilter] = useState("All");
 
   // Modals & Action State
   const [composeModal, setComposeModal] = useState({ open: false, item: null });
@@ -301,15 +345,22 @@ function AdminDashboard({ onLogout }) {
   const [messageText, setMessageText] = useState("");
   const [selectedDept, setSelectedDept] = useState(DEPARTMENTS[0]);
   const [isSending, setIsSending] = useState(false);
-  
+
   // Action Types: 'reply', 'forward', 'both'
   const [actionType, setActionType] = useState("reply");
 
   // Feedback
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+
+  // logs ref for autoscroll
   const consoleEndRef = useRef(null);
 
-  // -- Listeners --
+  // Should auto-update firestore when missing fields? (Option B: only when missing)
+  const AUTO_UPDATE_FIRESTORE = true;
+
+  /* ---------------------------
+     Firestore: logs listener
+     --------------------------- */
   useEffect(() => {
     const logDoc = doc(db, "logs", "bot");
     const unsub = onSnapshot(logDoc, (snap) => {
@@ -318,40 +369,89 @@ function AdminDashboard({ onLogout }) {
     return () => unsub();
   }, []);
 
-  useEffect(() => { consoleEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [botLogs]);
+  useEffect(() => {
+    consoleEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [botLogs]);
 
+
+
+
+  /* ---------------------------
+     Firestore: complaints listener (prefer Firestore fields)
+     --------------------------- */
   useEffect(() => {
     const q = query(collection(db, "complaints"), orderBy("timestamp", "desc"));
     const unsub = onSnapshot(q, (snap) => {
-      const arr = snap.docs.map(d => {
-        const data = d.data();
+      const list = snap.docs.map((d) => {
+        const data = d.data() || {};
+
+        // Prefer Firestore fields; fallback to detection only when missing
+        const category = (data.category && String(data.category).trim()) || autoDetectCategory(data.text);
+        const station = (data.location && String(data.location).trim()) || autoDetectStation(data.text) || "Unknown";
+
+        // Train detection (prefer Firestore trainNo)
+        const trainCandidates = extractTrainNumbers(data.text);
+        const trainNumber = (data.trainNo && String(data.trainNo).trim()) || (data.trainNumber && String(data.trainNumber).trim()) || (trainCandidates.length > 0 ? trainCandidates[0] : null);
+
+        // PNR detection: prefer DB pnr/PNR, else use extractPNR (last-10-digits strategy)
+        const dbPnr = (data.pnr && String(data.pnr).trim()) || (data.PNR && String(data.PNR).trim()) || null;
+        const detectedPnr = extractPNR(data.text, trainNumber);
+        const pnr = dbPnr || detectedPnr || null;
+
         return {
           id: d.id,
+          raw: data,
           ...data,
-          category: autoDetectCategory(data.text) || data.category,
-          station: autoDetectStation(data.text) || data.station || "Unknown",
-          trainNumber: extractTrainNumbers(data.text)[0] || data.trainNumber || null,
+          category,
+          station,
+          trainNumber,
+          pnr
         };
       });
-      setComplaints(arr);
-      setLoading(false);
-    });
-    return () => unsub();
-  }, []);
 
-  // -- Handlers --
+      setComplaints(list);
+      setLoading(false);
+
+      // Non-blocking write-back: only set missing DB fields (do not overwrite)
+      if (AUTO_UPDATE_FIRESTORE) {
+        list.forEach((item) => {
+          const dbRaw = item.raw || {};
+          const updates = {};
+
+          if ((!dbRaw.location || String(dbRaw.location).trim() === "") && item.station && item.station !== "Unknown") {
+            updates.location = item.station;
+          }
+          if ((!dbRaw.trainNo || String(dbRaw.trainNo).trim() === "") && item.trainNumber) {
+            updates.trainNo = item.trainNumber;
+          }
+          if ((!dbRaw.pnr && !dbRaw.PNR) && item.pnr) {
+            updates.pnr = item.pnr;
+          }
+          if ((!dbRaw.category || String(dbRaw.category).trim() === "") && item.category && item.category !== "Unclassified") {
+            updates.category = item.category;
+          }
+
+          if (Object.keys(updates).length > 0) {
+            updateDoc(doc(db, "complaints", item.id), updates).catch((err) => {
+              console.error("Auto-update failed for", item.id, err);
+            });
+          }
+        });
+      }
+    });
+
+    return () => unsub();
+  }, []); // eslint-disable-line
+
+  /* ---------------------------
+     Action handlers
+     --------------------------- */
 
   const handleOpenCompose = (item) => {
     setComposeModal({ open: true, item });
-    
-    // --- PRE-FILLING LOGIC ---
-    // 1. Text: Use existing reply text if available (for editing), else empty.
     setMessageText(item.admin_reply_text || "");
-
-    // 2. Action Type: Restore previous type if exists, else default to 'reply'.
     setActionType(item.replyType || "reply");
 
-    // 3. Department: Restore previous department, else try to auto-detect, else default.
     if (item.forward_dept) {
       setSelectedDept(item.forward_dept);
     } else if (item.station && DEPARTMENT_EMAILS[item.station]) {
@@ -364,81 +464,8 @@ function AdminDashboard({ onLogout }) {
   const handleCloseCompose = () => {
     setComposeModal({ open: false, item: null });
     setIsSending(false);
-    // Note: We don't reset text/dept here immediately so animation looks clean, 
-    // but handleOpenCompose overwrites them anyway.
   };
 
-  const handleSendAction = async () => {
-    if (!messageText.trim()) return alert("Please enter a message or instruction.");
-
-    setIsSending(true);
-    const { id } = composeModal.item;
-
-    try {
-      if (actionType === "reply") {
-        // --- REPLY LOGIC ---
-        // Status: "needs_reply" -> Bot tweets
-        // If editing a "Done" ticket, this re-queues it.
-        await updateDoc(doc(db, "complaints", id), {
-          status: "needs_reply",
-          admin_reply_text: messageText,
-          replyType: "reply",
-          replied_at: serverTimestamp()
-        });
-
-        setToast({ show: true, message: "Queued for Reply on X (Twitter)", type: "success" });
-        handleCloseCompose();
-
-      } else if (actionType === "forward") {
-        // --- EMAIL LOGIC ---
-        // Status: "Forwarded" -> Bot ignores
-        const targetEmail = DEPARTMENT_EMAILS[selectedDept];
-
-        await updateDoc(doc(db, "complaints", id), {
-          status: "Forwarded",
-          admin_reply_text: messageText,
-          forward_dept: selectedDept,
-          forward_email: targetEmail,
-          replyType: "forward",
-          replied_at: serverTimestamp()
-        });
-
-        // Send Email
-        await sendEmail(selectedDept, messageText, id, composeModal.item?.user, targetEmail);
-        handleCloseCompose();
-
-      } else if (actionType === "both") {
-        // --- BOTH LOGIC ---
-        // Status: "needs_reply" -> Bot tweets.
-        // Also trigger Email manually here.
-        const targetEmail = DEPARTMENT_EMAILS[selectedDept];
-
-        // 1. Queue for Bot
-        await updateDoc(doc(db, "complaints", id), {
-          status: "needs_reply", // Bot will process this
-          admin_reply_text: messageText,
-          replyType: "both", // stored for history, bot treats same as reply
-          forward_dept: selectedDept, // record dept for history
-          forward_email: targetEmail,
-          replied_at: serverTimestamp()
-        });
-
-        // 2. Send Email immediately
-        await sendEmail(selectedDept, messageText, id, composeModal.item?.user, targetEmail);
-        
-        setToast({ show: true, message: "Queued for Twitter Reply & Email Sent", type: "success" });
-        handleCloseCompose();
-      }
-
-    } catch (err) {
-      console.error(err);
-      setToast({ show: true, message: "Failed to process action.", type: "error" });
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  // Helper for email sending
   const sendEmail = async (dept, msg, ticketId, user, targetEmail) => {
     const stationKey = dept.toLowerCase();
     try {
@@ -466,6 +493,65 @@ function AdminDashboard({ onLogout }) {
     }
   };
 
+  const handleSendAction = async () => {
+    if (!messageText.trim()) return alert("Please enter a message or instruction.");
+
+    setIsSending(true);
+    const { id } = composeModal.item;
+
+    try {
+      if (actionType === "reply") {
+        await updateDoc(doc(db, "complaints", id), {
+          status: "needs_reply",
+          admin_reply_text: messageText,
+          replyType: "reply",
+          replied_at: serverTimestamp()
+        });
+
+        setToast({ show: true, message: "Queued for Reply on X (Twitter)", type: "success" });
+        handleCloseCompose();
+
+      } else if (actionType === "forward") {
+        const targetEmail = DEPARTMENT_EMAILS[selectedDept];
+
+        await updateDoc(doc(db, "complaints", id), {
+          status: "Forwarded",
+          admin_reply_text: messageText,
+          forward_dept: selectedDept,
+          forward_email: targetEmail,
+          replyType: "forward",
+          replied_at: serverTimestamp()
+        });
+
+        await sendEmail(selectedDept, messageText, id, composeModal.item?.user, targetEmail);
+        handleCloseCompose();
+
+      } else if (actionType === "both") {
+        const targetEmail = DEPARTMENT_EMAILS[selectedDept];
+
+        await updateDoc(doc(db, "complaints", id), {
+          status: "needs_reply",
+          admin_reply_text: messageText,
+          replyType: "both",
+          forward_dept: selectedDept,
+          forward_email: targetEmail,
+          replied_at: serverTimestamp()
+        });
+
+        await sendEmail(selectedDept, messageText, id, composeModal.item?.user, targetEmail);
+        
+        setToast({ show: true, message: "Queued for Twitter Reply & Email Sent", type: "success" });
+        handleCloseCompose();
+      }
+
+    } catch (err) {
+      console.error(err);
+      setToast({ show: true, message: "Failed to process action.", type: "error" });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const handleDelete = async (id) => {
     if(!window.confirm("Permanently delete this ticket?")) return;
     try {
@@ -477,30 +563,42 @@ function AdminDashboard({ onLogout }) {
     }
   };
 
-  // -- Filtering Logic --
+  /* ---------------------------
+     Filtering & derived values
+     --------------------------- */
+
+  const uniqueTrainNumbers = Array.from(new Set(complaints.map(c => c.trainNumber).filter(Boolean))).sort();
+  const uniqueSources = Array.from(new Set(complaints.map(c => c.source || "Unknown"))).sort();
+
   const filteredComplaints = complaints.filter(c => {
     const matchesSearch = !searchQ ||
       c.text?.toLowerCase().includes(searchQ.toLowerCase()) ||
-      c.user?.toLowerCase().includes(searchQ.toLowerCase());
+      (c.user && c.user.toLowerCase().includes(searchQ.toLowerCase())) ||
+      (c.name && c.name.toLowerCase().includes(searchQ.toLowerCase()));
 
     const matchesCat = categoryFilter === "All" || c.category === categoryFilter;
     const matchesDept = departmentFilter === "All" || (c.station || "Unknown") === departmentFilter;
+    const matchesTrain = trainFilter === "All" || String(c.trainNumber) === String(trainFilter);
+    const matchesSource = sourceFilter === "All" || (c.source || "Unknown") === sourceFilter;
 
     if (activeTab === "Pending") {
-      // Include "needs_reply" here so it stays in list until bot processes it
-      return (c.status === "Pending" || c.status === "needs_reply" || c.status === "Unclassified") && matchesSearch && matchesCat && matchesDept;
+      return (c.status === "Pending" || c.status === "needs_reply" || c.status === "Unclassified" || c.status === "new") && matchesSearch && matchesCat && matchesDept && matchesTrain && matchesSource;
     }
     if (activeTab === "Already Replied") {
-      return (c.status === "Replied" || c.status === "Forwarded") && matchesSearch && matchesCat && matchesDept;
+      return (c.status === "Replied" || c.status === "Forwarded") && matchesSearch && matchesCat && matchesDept && matchesTrain && matchesSource;
     }
-    return matchesSearch && matchesCat && matchesDept;
+    return matchesSearch && matchesCat && matchesDept && matchesTrain && matchesSource;
   });
 
   const historyList = complaints.filter(c => c.status === "Forwarded" || c.status === "Replied");
 
   const totalCount = complaints.length;
-  const pendingCount = complaints.filter(c => c.status === "Pending" || c.status === "needs_reply" || c.status === "Unclassified").length;
+  const pendingCount = complaints.filter(c => c.status === "Pending" || c.status === "needs_reply" || c.status === "Unclassified" || c.status === "new").length;
   const resolvedCount = complaints.filter(c => c.status === "Replied" || c.status === "Forwarded").length;
+
+  /* ---------------------------
+     RENDER
+     --------------------------- */
 
   return (
     <div className="app-root">
@@ -533,6 +631,17 @@ function AdminDashboard({ onLogout }) {
               {DEPARTMENTS.map(dept => <option key={dept} value={dept}>{dept}</option>)}
            </select>
 
+           <select
+             className="nav-select"
+             onChange={(e) => setTrainFilter(e.target.value)}
+             value={trainFilter}
+           >
+             <option value="All">All Trains</option>
+             {uniqueTrainNumbers.map(tn => <option key={tn} value={tn}>{tn}</option>)}
+           </select>
+
+        
+
            <div className="search-bar">
              <Search size={16} className="search-icon"/>
              <input
@@ -546,9 +655,17 @@ function AdminDashboard({ onLogout }) {
              <History size={16} />
            </button>
 
-           <button className="btn outline logout" onClick={() => onLogout(false)} title="Logout">
-             <LogOut size={16} />
-           </button>
+         <button
+  className="btn outline logout"
+  onClick={() => {
+    localStorage.removeItem("railway_admin_session");
+    onLogout(false);
+  }}
+  title="Logout"
+>
+  <LogOut size={16} />
+</button>
+
         </div>
       </nav>
 
@@ -626,14 +743,15 @@ function AdminDashboard({ onLogout }) {
                     <tr>
                       <th width="130">Category</th>
                       <th>Issue Details</th>
-                      <th width="120">Location</th>
+                      <th width="160">Train No / PNR</th>
+                      <th width="140">Location</th>
                       <th width="120">Status</th>
-                      <th width="140" align="right">Action</th>
+                      <th width="160" align="right">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredComplaints.length === 0 ? (
-                      <tr><td colSpan="5" style={{textAlign:"center", padding: 40}}>No records found.</td></tr>
+                      <tr><td colSpan="6" style={{textAlign:"center", padding: 40}}>No records found.</td></tr>
                     ) : (
                       filteredComplaints.map(c => (
                         <tr key={c.id}>
@@ -645,31 +763,35 @@ function AdminDashboard({ onLogout }) {
                           <td>
                              <div className="ticket-info">
                                <div className="ticket-header">
-                                 <span className="u-handle">@{c.user}</span>
+                                 <span className="u-handle">{getDisplayName(c)}</span>
                                  <span className="u-time">{c.timestamp ? safeDateFromTimestamp(c.timestamp).toLocaleString() : ''}</span>
                                </div>
                                <p className="ticket-text">{c.text}</p>
-                               <div className="ticket-meta">
-                                 Confidence: {(c.confidence * 100).toFixed(0)}%
-                                 {c.trainNumber && ` • Train: ${c.trainNumber}`}
-                               </div>
                              </div>
                           </td>
+
+                          {/* TRAIN NO / PNR */}
+                          <td style={{textAlign: "center", fontWeight: 600}}>
+                            {c.trainNumber ? String(c.trainNumber) : "N/A"}
+                            {c.pnr ? ` / ${c.pnr}` : ""}
+                          </td>
+
+                          {/* LOCATION */}
                           <td>
                             <div className="location-cell">
                               <strong>{c.station}</strong>
-                              <small>{c.trainNumber || "N/A"}</small>
                             </div>
                           </td>
+
                           <td>
                             <span className={`status-badge ${c.status === 'Pending' || c.status === 'needs_reply' ? 'warn' : 'good'}`}>
                                {c.status === 'needs_reply' ? 'Sending...' : c.status}
-                               {c.status === 'Forwarded' && <small>to {c.forward_dept}</small>}
+                               {c.status === 'Forwarded' && <small> to {c.forward_dept}</small>}
                             </span>
                           </td>
                           <td align="right">
                              <div className="action-cell">
-                               {c.status === 'Pending' || c.status === 'needs_reply' || c.status === 'Unclassified' ? (
+                               {c.status === 'Pending' || c.status === 'needs_reply' || c.status === 'Unclassified' || c.status === 'new' ? (
                                  <button className="btn primary small" onClick={() => handleOpenCompose(c)}>
                                    <Share2 size={14}/> Take Action
                                  </button>
@@ -679,7 +801,6 @@ function AdminDashboard({ onLogout }) {
                                  </div>
                                )}
                                
-                               {/* EDIT BUTTON (PENCIL) */}
                                <button 
                                  className="btn icon-only" 
                                  onClick={() => handleOpenCompose(c)} 
@@ -688,7 +809,6 @@ function AdminDashboard({ onLogout }) {
                                  <Pencil size={14}/>
                                </button>
 
-                               {/* DELETE BUTTON */}
                                <button className="btn icon-only" onClick={() => handleDelete(c.id)} title="Delete">
                                  <Trash2 size={14}/>
                                </button>
@@ -704,14 +824,14 @@ function AdminDashboard({ onLogout }) {
           </div>
         </main>
 
-        {/* LOGS SIDEBAR */}
+        {/* SYSTEM LOGS SIDEBAR */}
         <aside className="sidebar">
           <div className="console-wrapper">
             <div className="console-head">
               <Terminal size={14}/> System Logs
             </div>
             <div className="console-logs">
-              {botLogs.slice(-50).map((l, i) => (
+              {botLogs.slice(-200).map((l, i) => (
                 <div key={i} className="log-row"><span>{`>`}</span> {l}</div>
               ))}
               <div ref={consoleEndRef}/>
@@ -721,8 +841,6 @@ function AdminDashboard({ onLogout }) {
       </div>
 
       {/* --- MODALS --- */}
-
-      {/* COMPOSE MODAL */}
       <Modal
         open={composeModal.open}
         onClose={handleCloseCompose}
@@ -831,10 +949,13 @@ function AdminDashboard({ onLogout }) {
         type={toast.type}
         onClose={() => setToast({ ...toast, show: false })}
       />
-
     </div>
   );
 }
+
+/* =========================================
+   APP EXPORT
+========================================= */
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem("railway_admin_session") === "true");

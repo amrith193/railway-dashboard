@@ -28,6 +28,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+body.login-page {
+  background: none !important;
+}
+
+
 .app-root {
   display: flex;
   flex-direction: column;

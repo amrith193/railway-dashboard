@@ -1,22 +1,28 @@
-import React, { useState } from "react";
+// Login.jsx
+import React, { useEffect, useState } from "react";
 import { auth, db } from "./firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
+import "./Login.css";
 
 export default function Login({ onSuccess }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    // Remove global body background for this page
+    document.body.classList.add("login-page");
+    return () => document.body.classList.remove("login-page");
+  }, []);
+
   const loginNow = async (e) => {
     e.preventDefault();
     setError("");
 
     try {
-      // Firebase Auth
       await signInWithEmailAndPassword(auth, email, password);
 
-      // Firestore admin check
       const adminRef = doc(db, "admins", email);
       const snap = await getDoc(adminRef);
 
@@ -25,66 +31,53 @@ export default function Login({ onSuccess }) {
         return;
       }
 
-      onSuccess(); // logged in
+      onSuccess();
     } catch (err) {
       setError("Invalid email or password.");
-      console.log(err);
     }
   };
 
   return (
-    <div style={styles.container}>
-      <h2>Admin Login</h2>
+    <div className="login-root">
+      <div className="login-overlay"></div>
 
-      <form onSubmit={loginNow} style={styles.form}>
-        <input
-          type="email"
-          placeholder="Email"
-          required
-          style={styles.input}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+      <div className="login-card">
+        <div className="login-header">
+          <div className="rail-logo-circle">🚆</div>
+          <h2>RailSeva Admin</h2>
+          <p>Authorized Personnel Only</p>
+        </div>
 
-        <input
-          type="password"
-          placeholder="Password"
-          required
-          style={styles.input}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <form onSubmit={loginNow}>
+          <div className="input-group-login">
+            <span className="input-icon">📧</span>
+            <input
+              type="email"
+              placeholder="Email Address"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
 
-        {error && <p style={styles.error}>{error}</p>}
+          <div className="input-group-login">
+            <span className="input-icon">🔒</span>
+            <input
+              type="password"
+              placeholder="Password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
 
-        <button type="submit" style={styles.button}>
-          Login
-        </button>
-      </form>
+          {error && <p className="error-text">{error}</p>}
+
+          <button type="submit" className="btn-login-submit">
+            Secure Login
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
-
-const styles = {
-  container: {
-    maxWidth: 400,
-    margin: "80px auto",
-    padding: 20,
-    background: "#fff",
-    boxShadow: "0 0 12px rgba(0,0,0,0.1)",
-    borderRadius: 12,
-    textAlign: "center"
-  },
-  form: { display: "flex", flexDirection: "column", gap: 12 },
-  input: {
-    padding: 10,
-    borderRadius: 6,
-    border: "1px solid #ccc"
-  },
-  button: {
-    padding: "10px 12px",
-    background: "#2563eb",
-    color: "white",
-    borderRadius: 6,
-    border: "none"
-  },
-  error: { color: "red", fontSize: "0.9rem" }
-};
